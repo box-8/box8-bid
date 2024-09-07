@@ -96,6 +96,9 @@ if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
                     rapportGaelJAUNIN.writeBlue(f"{question}")
                     answer = commercial.answer(question)
                     rapportGaelJAUNIN.writeBlack(answer)
+                    st.markdown(f"{question}")
                     st.markdown(f"{answer}")
             rapportGaelJAUNIN.saveDocument()
+            
+            
 toast(None)

@@ -50,12 +50,13 @@ class Commercial() :
                 L'agent de recherche cherchera dans le PDF pour trouver les réponses pertinentes.
                 Votre réponse finale DOIT être claire et précise, basée sur le contenu du PDF de l'offre.
                 Si l'offre ne répond pas à la question posée, il faut le préciser et proposer d'ajuster l'offre au moyen d'une question adaptée
-                Voici la question du client :
+                Voici la question :
                 {customer_question}
                 """
             ),
             expected_output="""
-                Fournir des réponses claires et précises aux questions du client strictement basées sur le contenu du PDF de l'offre.
+                Fournir des réponses claires et concises aux questions strictement basées sur le contenu du PDF de l'offre à analyser.
+                
                 """,
             tools=[self.offre],
             agent=self.research_agent,
@@ -72,7 +73,7 @@ class Commercial() :
                 """
             ),
             expected_output="""
-                Rédiger un texte clair et concis en réponse au client pour justifier la prestation.
+                Rédiger un texte clair et concis décrivant la prestation.
                 """,
             tools=[],
             agent=self.professional_writer_agent,

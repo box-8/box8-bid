@@ -4,7 +4,8 @@ from utils.Functions import extraire_tableau_json
 
 # --- Classe Commercial ---
 class Commercial() :
-    def __init__(self, offre : PDFSearchTool):
+    def __init__(self, name: str = "", offre: PDFSearchTool = None):
+        self.name = name
         self.offre = offre
         self.research_agent = Agent(
             role="Agent de Recherche",

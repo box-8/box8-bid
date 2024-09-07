@@ -16,7 +16,7 @@ agents_commerciaux: List[Commercial] = []
 # --- Streamlit Interface and sidebar ---
 st.title("Analyseur d'offres")
 
-with st.expander("Explications"):
+with st.expander("Explications", expanded=True):
     st.markdown("""
     L'analyse d'offre à partir d'un cahier des charges est un processus important dans le cadre d'un appel d'offres. Elle consiste à examiner attentivement les propositions des différents soumissionnaires afin de déterminer celle qui répond le mieux aux exigences et aux besoins spécifiés dans le cahier des charges.
 
@@ -55,7 +55,7 @@ def create_Commercial(offre_uploaded_1):
             offre_temp_pdf_1.write(offre_uploaded_1.read())
             offre_temp_pdf_path_1 = offre_temp_pdf_1.name
         cctp_pdf_search_tool_1 = PDFSearchTool(pdf=offre_temp_pdf_path_1)
-        return Commercial(cctp_pdf_search_tool_1)
+        return Commercial(name=offre_uploaded_1, offre=cctp_pdf_search_tool_1)
     except Exception as e:
         print(f"Une erreur s'est produite : {str(e)}")
         return None
@@ -86,7 +86,7 @@ if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
             rapportGaelJAUNIN = DocumentWriter("Rapport d'analyse d'offres")
             
             for i, commercial in enumerate(agents_commerciaux):
-                Chapter = f"Commercial {i+1}"
+                Chapter = f"Commercial {i+1} : {commercial.name} "
                 rapportGaelJAUNIN.Chapter(Chapter)
                 st.markdown(f"## {Chapter}")
                 for entry in questionsGaelJaunin:

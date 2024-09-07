@@ -1,6 +1,7 @@
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import PDFSearchTool
 from utils.Functions import extraire_tableau_json
+from utils.LLM import PDFSearchToolFactory
 
 # --- Classe Commercial ---
 class Commercial() :

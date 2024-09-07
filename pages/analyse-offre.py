@@ -14,12 +14,12 @@ load_dotenv()
 agents_commerciaux: List[Commercial] = []
 
 # --- Streamlit Interface and sidebar ---
-st.title("Analyseur d'offres")
+st.title(f"Analyseur d'offres ({st.session_state.llm_model})")
 
 with st.expander("Explications" , expanded=True):
     st.markdown("""
     L'analyse d'offre à partir d'un cahier des charges est un processus important dans le cadre d'un appel d'offres. Elle consiste à examiner attentivement les propositions des différents soumissionnaires afin de déterminer celle qui répond le mieux aux exigences et aux besoins spécifiés dans le cahier des charges.
-
+    
     Concrètement, cette analyse implique une évaluation rigoureuse de chaque offre en fonction des critères prédéfinis, tels que :
     * le prix, 
     * la qualité, 

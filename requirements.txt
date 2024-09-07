@@ -1,0 +1,10 @@
+streamlit
+crewai
+crewai_tools
+docx
+dotenv
+datetime 
+json
+
+langchain
+langchain_groq

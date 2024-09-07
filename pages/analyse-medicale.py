@@ -89,10 +89,13 @@ if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
                 Chapter = f"Commercial {i+1}"
                 rapportGaelJAUNIN.Chapter(Chapter)
                 st.markdown(f"## {Chapter}")
-                for question in questionsGaelJaunin:
-                    rapportGaelJAUNIN.SubChapter(question)
+                for entry in questionsGaelJaunin:
+                    enjeu = entry["enjeu"]
+                    question = entry["question"]
+                    rapportGaelJAUNIN.SubChapter(f"{enjeu}")
+                    rapportGaelJAUNIN.writeBlue(f"{question}")
                     answer = commercial.answer(question)
-                    rapportGaelJAUNIN.Chapter(answer)
+                    rapportGaelJAUNIN.writeBlack(answer)
                     st.markdown(f"{answer}")
             rapportGaelJAUNIN.saveDocument()
 toast(None)

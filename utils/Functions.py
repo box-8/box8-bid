@@ -56,8 +56,13 @@ class DocumentWriter():
     def SubChapter(self,title):
         self.docAnalyse.add_heading(title, 2)
     
-    def write(self,text):
-        self.docAnalyse.add_paragraph(text)
+    def writeBlack(self,text):
+        paragraph = self.docAnalyse.add_paragraph(text)
+        paragraph.style.font.color.rgb = RGBColor(0, 0, 0)
+    
+    def writeBlue(self,text):
+        paragraph = self.docAnalyse.add_paragraph(text)
+        paragraph.style.font.color.rgb = RGBColor(0, 0, 255)
         
     def writeDocument(self, text, heading_level=None, color=RGBColor(0, 0, 0)): # Noir par défaut
         """

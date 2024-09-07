@@ -10,41 +10,11 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from utils.Agents import Commercial
+from utils.Functions import toast, extraire_tableau_json
+
 
 load_dotenv()
 
-
-def extraire_tableau_json(chaine):
-    """
-    Extrait le premier tableau JSON trouvé dans une chaîne de caractères.
-    Args:
-        chaine: La chaîne de caractères contenant le tableau JSON.
-
-    Returns:
-        Le tableau JSON extrait sous forme de liste Python, ou None si aucun tableau n'est trouvé.
-    """
-    debut = chaine.find('[')
-    if debut == -1:
-        return None  # Aucun tableau trouvé
-
-    fin = chaine.rfind(']')
-    if fin == -1 or fin < debut:
-        return None  # Tableau mal formé
-    try:
-        tableau_json = json.loads(chaine[debut:fin+1])
-        return tableau_json
-    except json.JSONDecodeError:
-        return None  # Erreur lors de la désérialisation JSON
-
-
-Toaster: str = ""  # Déclaration de la variable globale avec typage explicite
-def toast(val=None):
-    global Toaster  # Utilisation du mot-clé global pour accéder à la variable globale
-    if val is None:
-        st.toast(Toaster)
-    else:
-        Toaster += "\n " + val  # Concaténation améliorée 
-    
 
 
 # --- Global Word Document ---
@@ -150,7 +120,7 @@ with tab1:
         else:
             # Save uploaded PDF to a temporary file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as offre_temp_pdf_3:
-                offre_temp_pdf_3.write(offre_uploaded_2.read())
+                offre_temp_pdf_3.write(offre_uploaded_3.read())
                 offre_temp_pdf_path_3 = offre_temp_pdf_3.name
             offre_pdf_search_tool_3 = PDFSearchTool(pdf=offre_temp_pdf_path_3)
             agents_commerciaux.append(Commercial(offre_pdf_search_tool_3))
@@ -250,7 +220,7 @@ with tab1:
                         for k, entry in enumerate(questionnements) :
                             enjeu =  entry["enjeu"]
                             question = entry["question"]
-                            responseCommercial = commercial.ask(enjeu, question)
+                            responseCommercial = commercial.ask(question)
                             
                             st.write(f"{enjeu} : {question}")
                             

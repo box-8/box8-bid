@@ -10,7 +10,6 @@ Cette application vous permet de :
 
 * **Analyser des offres** : Téléchargez un document d'offre (PDF, Word, etc.) et obtenez un résumé des points clés, des clauses importantes et des informations financières.
 * **Explorer des URL** : Collez une URL et obtenez un aperçu du contenu de la page, des mots-clés pertinents et des informations sur le site web.
-
 **Commencez dès maintenant !** 
 """)
 

@@ -8,7 +8,6 @@ if 'llm_model' not in st.session_state:
 
 st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🔍") 
 st.title("Box 8 : la boite à outils du consultant augmenté")
-st.subheader(st.session_state.llm_model)
     
 
 tab1, tab2 = st.tabs(["Home","Options"])

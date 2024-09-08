@@ -1,13 +1,21 @@
+import streamlit as st 
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import PDFSearchTool
 from utils.Functions import extraire_tableau_json
-from utils.LLM import PDFSearchToolFactory
+from utils.LLM import LLMFactory
 
 # --- Classe Commercial ---
 class Commercial() :
     def __init__(self, name: str = "", offre: PDFSearchTool = None):
         self.name = name
         self.offre = offre
+        if st.session_state.llm_model == "openai":
+            self.llm = LLMFactory.OpenAI()
+        elif st.session_state.llm_model == "groq":
+            self.llm = LLMFactory.Groq()
+        elif st.session_state.llm_model == "local":
+            self.llm = LLMFactory.LMStudio()
+     
         self.research_agent = Agent(
             role="Agent de Recherche",
             goal="Rechercher dans le PDF pour trouver des réponses pertinentes",
@@ -22,6 +30,7 @@ class Commercial() :
             tools=[self.offre],
         )
 
+            
         self.professional_writer_agent = Agent(
             role="Rédacteur Professionnel",
             goal="Rédiger des réponses professionnelles basés sur les résultats de l'agent de recherche",
@@ -120,7 +129,7 @@ class Consultant():
                 """
                 Véritable chef d'orchestre l'ingénieur généraliste est compétent pour rechercher et 
                 extraire des points d'attention dans les documents fournis.
-                Il garanti qu'aucun manquement ne soit présent  la porte à des non confromités dans le projet qui lui est confié.
+                Il garanti qu'aucun manquement ne soit présent traite les non conformités dans le projet qui lui est confié.
                 """
             ),
             tools=[self.cctp_pdf_search_tool],

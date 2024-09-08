@@ -56,4 +56,4 @@ with tab1:
         
         
     with col2:
-        st.page_link("pages/analyse-medicale.py")
+        st.page_link("pages/compte-rendu-chantier.py")

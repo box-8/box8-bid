@@ -4,18 +4,27 @@ from crewai_tools import PDFSearchTool
 from utils.Functions import extraire_tableau_json
 from utils.LLM import LLMFactory
 
-# --- Classe Commercial ---
-class Commercial() :
-    def __init__(self, name: str = "", offre: PDFSearchTool = None):
-        self.name = name
-        self.offre = offre
+
+
+
+class BasicAgent():
+    def __init__(self):
         if st.session_state.llm_model == "openai":
             self.llm = LLMFactory.OpenAI()
         elif st.session_state.llm_model == "groq":
             self.llm = LLMFactory.Groq()
         elif st.session_state.llm_model == "local":
             self.llm = LLMFactory.LMStudio()
-     
+
+
+
+# --- Classe Commercial ---
+class Commercial(BasicAgent) :
+    def __init__(self, name: str = "", offre: PDFSearchTool = None):
+        self.name = name
+        self.offre = offre
+        
+        
         self.research_agent = Agent(
             role="Agent de Recherche",
             goal="Rechercher dans le PDF pour trouver des réponses pertinentes",

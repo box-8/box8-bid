@@ -6,7 +6,11 @@ from docx import Document
 from docx.shared import RGBColor
 from crewai_tools import PDFSearchTool
 
-Toaster: str = "Hello"  # Déclaration de la variable globale avec typage explicite
+
+if 'llm_model' not in st.session_state:
+    st.session_state.llm_model = 'openai'  
+    
+Toaster: str = None  # Déclaration de la variable globale avec typage explicite
 def toast(val=None):
     global Toaster  # Utilisation du mot-clé global pour accéder à la variable globale
     if val is None:
@@ -97,5 +101,6 @@ class DocumentWriter():
         # Save the Word document
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"result_{timestamp}.docx"
-        self.docAnalyse.save(filename) 
+        path = self.docAnalyse.save(filename) 
+        return path
 

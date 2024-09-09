@@ -5,14 +5,17 @@ from langchain_groq import ChatGroq
 from langchain_community.tools import DuckDuckGoSearchRun
 
 
-class LLMFactory:
-    def Groq(self, model="mixtral-8x7b-32768"):
-        GROQ_API_KEY = load_dotenv("GROQ_API_KEY")
-        llm =  ChatGroq(
-            temperature=0.7, 
-            groq_api_key=GROQ_API_KEY, 
-            model_name=model
-            )
+class LLMFactory():
+    def __init__(self):
+        self.OpenAI()
+    def Groq(self, model="llama3-8b-8192"):
+        API_KEY = load_dotenv("GROQ_API_KEY")
+        llm = ChatOpenAI(
+            temperature=0.7,
+            openai_api_base="https://api.openai.com/v1",  # Le point de terminaison de l'API OpenAI
+            openai_api_key=API_KEY,  # Remplace par ta clé API OpenAI
+            model_name=model,  
+        )
         return llm
     
     def LMStudio(self):    

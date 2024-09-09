@@ -1,9 +1,11 @@
+import os
 from typing import List
 import streamlit as st 
 import tempfile
 from crewai_tools import PDFSearchTool
 from docx import Document
 from dotenv import load_dotenv
+
 
 from utils.Agents import Commercial, Consultant
 from utils.Functions import toast, extraire_tableau_json, DocumentWriter
@@ -14,9 +16,12 @@ load_dotenv()
 agents_commerciaux: List[Commercial] = []
 
 # --- Streamlit Interface and sidebar ---
+
+st.toast(st.session_state.llm_model)
+
 st.title(f"Analyseur d'offres ({st.session_state.llm_model})")
 
-with st.expander("Explications" , expanded=True):
+with st.expander("Explications" , expanded=False):
     st.markdown("""
     L'analyse d'offre à partir d'un cahier des charges est un processus important dans le cadre d'un appel d'offres. Elle consiste à examiner attentivement les propositions des différents soumissionnaires afin de déterminer celle qui répond le mieux aux exigences et aux besoins spécifiés dans le cahier des charges.
     
@@ -57,7 +62,7 @@ def create_Commercial(offre_uploaded_1):
         cctp_pdf_search_tool_1 = PDFSearchTool(pdf=offre_temp_pdf_path_1)
         return Commercial(name=offre_uploaded_1.name, offre=cctp_pdf_search_tool_1)
     except Exception as e:
-        print(f"Une erreur s'est produite : {str(e)}")
+        print(f"Une erreur s'est produite create_Commercial : {str(e)}")
         return None
         
 if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
@@ -72,13 +77,14 @@ if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
         cctp_pdf_search_tool = PDFSearchTool(pdf=cctp_temp_pdf_path)    
         gaelJaunin = Consultant(cctp_pdf_search_tool)
         questionsGaelJaunin = gaelJaunin.analyse_cctp()
-        
+        st.write(questionsGaelJaunin)
         agents_commerciaux.append(create_Commercial(offre_uploaded_1))
         agents_commerciaux.append(create_Commercial(offre_uploaded_2))
         agents_commerciaux.append(create_Commercial(offre_uploaded_3))
         # on nettoie le tableau d'offres Nulles
+        print(agents_commerciaux)
         agents_commerciaux = [offre for offre in agents_commerciaux if offre is not None]
-        
+        print(agents_commerciaux)
         if len(agents_commerciaux) <=1  :
             st.error("Fournir au moins une offre à analyser vis à vis du CCTP")
         else:
@@ -96,9 +102,10 @@ if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
                     rapportGaelJAUNIN.writeBlue(f"{question}")
                     answer = commercial.answer(question)
                     rapportGaelJAUNIN.writeBlack(answer)
-                    st.markdown(f"{question}")
+                    st.subheader(f"{question}")
                     st.markdown(f"{answer}")
-            rapportGaelJAUNIN.saveDocument()
+            docPath = rapportGaelJAUNIN.saveDocument()
+            button = st.button(f"Ouvrir le rapport",key="wordfinished")
+            if button: 
+                os.startfile(docPath)
             
-            
-toast(None)

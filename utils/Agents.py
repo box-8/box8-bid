@@ -1,29 +1,14 @@
-import streamlit as st 
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import PDFSearchTool
+from utils.Session import *
 from utils.Functions import extraire_tableau_json
-from utils.LLM import LLMFactory
-
-
-
-
-class BasicAgent():
-    def __init__(self):
-        if st.session_state.llm_model == "openai":
-            self.llm = LLMFactory.OpenAI()
-        elif st.session_state.llm_model == "groq":
-            self.llm = LLMFactory.Groq()
-        elif st.session_state.llm_model == "local":
-            self.llm = LLMFactory.LMStudio()
-
 
 
 # --- Classe Commercial ---
-class Commercial(BasicAgent) :
+class Commercial() :
     def __init__(self, name: str = "", offre: PDFSearchTool = None):
         self.name = name
         self.offre = offre
-        
         
         self.research_agent = Agent(
             role="Agent de Recherche",
@@ -37,6 +22,7 @@ class Commercial(BasicAgent) :
                 """
             ),
             tools=[self.offre],
+            llm = ChooseLLM()
         )
 
             
@@ -54,6 +40,7 @@ class Commercial(BasicAgent) :
                 """
             ),
             tools=[],
+            llm = ChooseLLM()
         )
         
         self.crewresult = ""
@@ -64,16 +51,15 @@ class Commercial(BasicAgent) :
         self.answer_customer_question_task = Task(
             description=(
                 """
-                Répondez aux questions du  basées sur le PDF de l'offre.
-                L'agent de recherche cherchera dans le PDF pour trouver les réponses pertinentes.
-                Votre réponse finale DOIT être claire et précise, basée sur le contenu du PDF de l'offre.
-                Si l'offre ne répond pas à la question posée, il faut le préciser et proposer d'ajuster l'offre au moyen d'une question adaptée
+                Répondez à la question ci-dessous en vous basant uniquement sur l'offre fournie.
+                Si L'offre ne donne ne donne aucune indication sur la question posée, précisez-le et proposez une modification 
+                en suggérant une question adaptée. 
                 Voici la question :
                 {customer_question}
                 """
             ),
             expected_output="""
-                Fournir des réponses claires et concises aux questions strictement basées sur le contenu du PDF de l'offre à analyser.
+                Fournir des réponses claires et concises aux questions strictement basées sur le contenu de l'offre à analyser.
                 
                 """,
             tools=[self.offre],
@@ -83,15 +69,13 @@ class Commercial(BasicAgent) :
         self.write_email_task = Task(
             description=(
                 """
-                Rédiger une analyse fine du contenu de l'offre comparativement à la demande du cahier des charges :  
-                - basé sur les résultats de l'agent de recherche.
-                - L'analyse doit indiquer clairement les solutions mise en oeuvre dans le devis pour cadrer avec l'enjeu.
-                - Argumenter d'après les de manière à répondre aux questions soulevées dans par l'enjeu
-                - Si le devis ne cadre pas avec les enjeiux du cahier des charges, il faut le préciser en indiquant que l'offre doit être corrigée
+                Analysez l'offre en la comparant au cahier des charges à partir des éléments fournis : 
+                1- Résumer les solutions proposées pour répondre aux enjeux. 
+                2- Indiquer les manquements qui ne correspondent pas aux exigences en précisant les corrections nécessaires.
                 """
             ),
             expected_output="""
-                Rédiger un texte clair et concis décrivant la prestation.
+                Rédiger un texte clair concis décrivant la prestation.
                 """,
             tools=[],
             agent=self.professional_writer_agent,
@@ -103,24 +87,28 @@ class Commercial(BasicAgent) :
                 tasks=[self.answer_customer_question_task, self.write_email_task],
                 process=Process.sequential,
             )
-    
-        result = self.crew.kickoff(inputs={"customer_question": question})
+        try : 
+            result = self.crew.kickoff(inputs={"customer_question": question})
 
-        # Normaliser le résultat sous forme de chaîne de caractères
-        if isinstance(result, tuple):
-            # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
-            result = "\n".join(map(str, result))
-        elif isinstance(result, list):
-            # Si c'est une liste, on la convertit également en chaîne
-            result = "\n".join(result)
-        elif isinstance(result, dict):
-            # Si c'est un dictionnaire, formater chaque paire clé-valeur
-            result = "\n".join(f"{key}: {value}" for key, value in result.items())
-        else:
-            # Assurer que le résultat est bien une chaîne
-            result = str(result)
+            # Normaliser le résultat sous forme de chaîne de caractères
+            if isinstance(result, tuple):
+                # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
+                result = "\n".join(map(str, result))
+            elif isinstance(result, list):
+                # Si c'est une liste, on la convertit également en chaîne
+                result = "\n".join(result)
+            elif isinstance(result, dict):
+                # Si c'est un dictionnaire, formater chaque paire clé-valeur
+                result = "\n".join(f"{key}: {value}" for key, value in result.items())
+            else:
+                # Assurer que le résultat est bien une chaîne
+                result = str(result)
 
-        return result
+            return result
+        except Exception as e:
+            print(f"Erreur lors de l'appel de Commercial.answer : {e}")
+            return e 
+
 
 
 
@@ -130,24 +118,22 @@ class Consultant():
     def __init__(self, cctp : PDFSearchTool):
         self.cctp_pdf_search_tool = cctp
         self.ingenieur_generaliste = Agent(
-            role="Ingénieur généraliste",
-            goal="Poser des questions pertinentes permettant de comparer des offres et conduire le projet vers le succès",
+            role="Chef de projet",
+            goal="Ingénieur généraliste le chef de projet pose les questions pertinentes permettant de comparer des offres",
             allow_delegation=False,
             verbose=True,
             backstory=(
                 """
-                Véritable chef d'orchestre l'ingénieur généraliste est compétent pour rechercher et 
-                extraire des points d'attention dans les documents fournis.
-                Il garanti qu'aucun manquement ne soit présent traite les non conformités dans le projet qui lui est confié.
+                Chef de projet, l'ingénieur généraliste est garant de la qualité, du  délai et du budget de réalisation.
                 """
             ),
             tools=[self.cctp_pdf_search_tool],
+            llm=ChooseLLM()
         )
     
     def analyse_cctp(self):
         self.expected_output_json="""
-            En retour, générer uniquement une chaine de charactères représentant un tableau json contenant les enjeux du cahier des charges (CCTP) 
-            listés sous la forme de questions selon la structure suivante : 
+            Générer une chaîne de caractères représentant un tableau JSON des enjeux du CCTP sous forme de questions, avec la structure suivante : 
             [
                 \{ 
                     "enjeu" : "titre de l'enjeu du CCTP",
@@ -159,9 +145,7 @@ class Consultant():
         
         task_list_keypoints = Task(
             description=(""" 
-                A partir du contexte du projet décrit dans le cahier des charges (CCTP);
-                extraire des points d'attention de manière à vérifier ultérieurement dans les offres des entreprises que 
-                les enjeux sont bien pris en compte. 
+                À partir du cahier des charges (CCTP), identifiez les points clés à vérifier dans les offres pour s'assurer que les enjeux sont bien pris en compte. 
                 """),
             expected_output=self.expected_output_json,
             tools=[self.cctp_pdf_search_tool],
@@ -176,9 +160,12 @@ class Consultant():
             verbose=True,
             )
         
-        self.crew_output = self.crew.kickoff()
-        #st.write(self.crew_output)
-        self.questionnements = []
-        RAW = self.crew_output.raw
-        self.questionnements = extraire_tableau_json(RAW)
-        return self.questionnements
+        try :
+            self.crew_output = self.crew.kickoff()
+            self.questionnements = []
+            RAW = self.crew_output.raw
+            self.questionnements = extraire_tableau_json(RAW)
+            return self.questionnements
+        except Exception as e:
+            print(f"Erreur lors de l'appel de Consultant.analyse_cctp : {e}")
+            return e 

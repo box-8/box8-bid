@@ -9,6 +9,7 @@ from docx import Document
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from utils.Functions import DocumentWriter
+from utils.Session import ChooseLLM
 
 load_dotenv()
 
@@ -49,9 +50,7 @@ if crc_uploaded is not None:
     
     button = st.button(f"voir le pdf",key="file_rename")
     if button: 
-        os.startfile(crc_temp_pdf_path)
-
-question = st.text_input("Saisissez votre question :")
+        question = st.text_input("Saisissez votre question :")
 
 if question and st.button("Lancer analyse") :
     rapportGaelJAUNIN = DocumentWriter("Rapport d'analyse d'offres")

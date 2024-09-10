@@ -62,3 +62,9 @@ def ChooseLLM(name=""):
             model_name="gpt-3-turbo",  # Utilise GPT-4 par exemple, ou un autre modèle supporté
         )
     return selected_llm
+
+
+
+# --- PATH de la base de données sqlite
+
+SQL_LITE_AFFAIRES_PATH = 'sqlite:///C:/_prod/box8-bid/affaires.db'

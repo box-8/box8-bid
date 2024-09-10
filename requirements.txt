@@ -8,3 +8,6 @@ json
 
 langchain
 langchain_groq
+
+
+sqlalchemy

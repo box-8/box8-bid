@@ -2,17 +2,10 @@ import streamlit as st
 from utils.Session import init_session
 init_session()
 
-
-
-
-
-
-st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🔍") 
+st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🤖", layout="wide") 
 st.title("Box 8 : la boite à outils du consultant augmenté")
     
-
 tab1, tab2 = st.tabs(["Home","Options"])
-
 
 with tab2:
     st.subheader("Options")

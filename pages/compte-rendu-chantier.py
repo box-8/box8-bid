@@ -43,7 +43,7 @@ st.toast(st.session_state.llm_model)
 st.header("CRC")
 crc_uploaded = st.file_uploader("Télécharger le compte rendu", type="pdf")
 crc_pdf_search_tool = None
-question = False
+
 if crc_uploaded is not None:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as crc_temp_pdf:
         crc_temp_pdf.write(crc_uploaded.read())
@@ -53,8 +53,12 @@ if crc_uploaded is not None:
     button = st.button(f"voir le pdf",key="file_rename")
 
     if button: 
-        question = st.text_input("Saisissez votre question :")
-
+        # os.path.join(DATA_PATH, file_rename)
+        os.startfile(crc_temp_pdf_path)
+    question = st.text_input("Saisissez votre question :")
+else :
+    question = False
+    
 if question and st.button("Lancer analyse") :
     rapportGaelJAUNIN = DocumentWriter("Rapport d'analyse d'offres")
     # Define general agent

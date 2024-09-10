@@ -59,7 +59,6 @@ def ChooseLLM(name=""):
             temperature=0.7,
             openai_api_base="https://api.openai.com/v1",  # Le point de terminaison de l'API OpenAI
             openai_api_key=API_KEY ,  # Remplace par ta clé API OpenAI
-            model_name="gpt-3-turbo",  # Utilise GPT-4 par exemple, ou un autre modèle supporté
         )
     return selected_llm
 

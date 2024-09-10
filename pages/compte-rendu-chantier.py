@@ -14,6 +14,8 @@ from utils.Session import ChooseLLM
 load_dotenv()
 
 # --- Streamlit Interface and sidebar ---
+st.set_page_config(page_title="Compte Rendu de Chantier", page_icon="🏀", layout="wide") 
+
 st.title(f"Assistant Compte Rendu de Chantier (CRC)")
 
 with st.expander("Explications" , expanded=False):
@@ -41,7 +43,7 @@ st.toast(st.session_state.llm_model)
 st.header("CRC")
 crc_uploaded = st.file_uploader("Télécharger le compte rendu", type="pdf")
 crc_pdf_search_tool = None
-
+question = False
 if crc_uploaded is not None:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as crc_temp_pdf:
         crc_temp_pdf.write(crc_uploaded.read())
@@ -49,6 +51,7 @@ if crc_uploaded is not None:
     crc_pdf_search_tool = PDFSearchTool(pdf=crc_temp_pdf_path) 
     
     button = st.button(f"voir le pdf",key="file_rename")
+
     if button: 
         question = st.text_input("Saisissez votre question :")
 

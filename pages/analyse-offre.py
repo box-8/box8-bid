@@ -5,18 +5,31 @@ import tempfile
 from crewai_tools import PDFSearchTool
 from docx import Document
 from dotenv import load_dotenv
-
+from utils.Session import ChooseLLM
 
 from utils.Agents import Commercial, Consultant
 from utils.Functions import toast, extraire_tableau_json, DocumentWriter
 
 load_dotenv()
 
+st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🤖", layout="wide") 
+
 #tableau dans lequel on va stocker les Agents commerciaux
 agents_commerciaux: List[Commercial] = []
 
 # --- Streamlit Interface and sidebar ---
 
+
+# selected_llm = st.sidebar.radio(
+#         "Choose LLM",
+#         st.session_state.llm_allowed,
+#         captions=st.session_state.llm_allowed_def,
+#         key="selected_llm_options"
+#     )
+# if selected_llm :
+#     st.session_state.llm_model = selected_llm
+    
+    
 st.toast(st.session_state.llm_model)
 
 st.title(f"Analyseur d'offres ({st.session_state.llm_model})")

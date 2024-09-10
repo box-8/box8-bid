@@ -2,25 +2,30 @@ import os
 import streamlit as st
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant
+from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant, get_entity_dataframe
 from utils.Session import SQL_LITE_AFFAIRES_PATH
 
 # Initialisation de la base de données
 engine = create_engine(SQL_LITE_AFFAIRES_PATH)
 Session = sessionmaker(bind=engine)
-session = Session()
+DbSession = Session()
 
 st.set_page_config(page_title="Gestion des Chantiers", page_icon="🏉", layout="wide") 
 
 # Fonction pour afficher les intervenants
 def afficher_intervenants(affaire):
     st.subheader(f"Intervenants pour {affaire.nom}")
+    if affaire is None:
+        return None
+
     for intervenant in affaire.intervenants:
-        st.write(f"{intervenant.prenom} {intervenant.nom} - {intervenant.role} ({intervenant.tel}, {intervenant.mail})")
+        st.markdown(f"""{intervenant.prenom} {intervenant.nom} {intervenant.role}
+         ({intervenant.tel} - 
+         {intervenant.mail})""")
         if st.button(f"Supprimer {intervenant.prenom} {intervenant.nom}", key=f"delete_intervenant_{intervenant.id}"):
-            session.delete(intervenant)
-            session.commit()
-            st.experimental_rerun()
+            DbSession.delete(intervenant)
+            DbSession.commit()
+            st.rerun()
 
 # Fonction pour ajouter un intervenant
 def ajouter_intervenant(affaire):
@@ -35,10 +40,27 @@ def ajouter_intervenant(affaire):
 
         if submit_button:
             intervenant = Intervenant(prenom=prenom, nom=nom, role=role, tel=tel, mail=mail, affaire_id=affaire.id)
-            session.add(intervenant)
-            session.commit()
+            DbSession.add(intervenant)
+            DbSession.commit()
             st.success("Intervenant ajouté avec succès.")
-            st.experimental_rerun()
+            st.rerun()
+
+
+# Fonction pour ajouter les macrolots aux affaires
+def ajouter_macrolot(affaire):
+    st.subheader(f"Ajouter un macrolot pour {affaire.nom}")
+    with st.form(key='ajouter_macrolot'):
+        nom = st.text_input("Nom du macrolot")
+        type_macrolot = st.selectbox("Type de macrolot", ["génie civil", "équipement", "électricité", "autres"])  
+        montant = st.number_input("Montant", min_value=0.0, format="%.2f")
+        submit_button = st.form_submit_button("Ajouter Macrolot")
+
+        if submit_button:
+            macrolot = Macrolot(nom=nom, type=type_macrolot, montant=montant, affaire_id=affaire.id)
+            DbSession.add(macrolot)
+            DbSession.commit()
+            st.success("Macrolot ajouté avec succès.")
+            st.rerun()
 
 # Fonction pour afficher les macrolots et leurs lots
 def afficher_macrolots(affaire):
@@ -46,11 +68,11 @@ def afficher_macrolots(affaire):
     for macrolot in affaire.macrolots:
         st.write(f"Macrolot: {macrolot.nom}, Type: {macrolot.type}, Montant Total: {macrolot.montant}")
         for lot in macrolot.lots:
-            st.write(f" - Lot: {lot.categorie}, Montant Commande: {lot.montant_commande}")
+            st.success(f" - Lot: {lot.categorie}, Montant Commande: {lot.montant_commande}")
             if st.button(f"Supprimer Lot {lot.id}", key=f"delete_lot_{lot.id}"):
-                session.delete(lot)
-                session.commit()
-                st.experimental_rerun()
+                DbSession.delete(lot)
+                DbSession.commit()
+                st.rerun()
 
 # Fonction pour ajouter un lot à un macrolot
 def ajouter_lot(macrolot):
@@ -70,63 +92,131 @@ def ajouter_lot(macrolot):
             with open(devis_path, "wb") as f:
                 f.write(devis.getbuffer())
             lot = Lot(categorie=categorie, devis=devis_path, montant_commande=montant_commande, retenu=retenu, macrolot_id=macrolot.id)
-            session.add(lot)
-            session.commit()
+            DbSession.add(lot)
+            DbSession.commit()
             st.success("Lot ajouté avec succès.")
             st.experimental_rerun()
+            
+            
+def trouver_index(valeur, tableau):
+    try:
+        index = tableau.index(valeur)
+        return index
+    except ValueError:
+        return 0
 
+def selectionner_affaires(affaires):
+    affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
+    affaire = DbSession.query(Affaire).get(affaire_id)
+    st.session_state.current_affaire = affaire
+    return affaire
+    
 # Gestion des affaires
 def gerer_affaires():
     st.title("Gestion des Affaires")
 
     # Onglets pour gérer chaque section
     tab_affaires, tab_intervenants, tab_macrolots, tab_lots = st.tabs(["Affaires", "Intervenants", "Macrolots", "Lots"])
+    affaires = DbSession.query(Affaire).all()
 
     with tab_affaires:
-        st.subheader("Liste des Affaires")
-        affaires = session.query(Affaire).all()
-        for affaire in affaires:
-            st.subheader(f"{affaire.nom} - {affaire.state}")
-            st.write(f"Type: {affaire.type}, Montant: {affaire.montant}")
-            if st.button(f"Supprimer {affaire.nom}", key=f"delete_affaire_{affaire.id}"):
-                session.delete(affaire)
-                session.commit()
-                st.experimental_rerun()
 
-        # Formulaire pour ajouter une affaire
-        with st.form(key='affaire_form'):
-            nom = st.text_input("Nom de l'affaire")
-            description = st.text_area("Description")
-            type_affaire = st.selectbox("Type d'affaire", ["Génie civil", "Équipements", "Autres"])
-            montant = st.number_input("Montant total", min_value=0.0, format="%.2f")
-            state = st.selectbox("État de l'affaire", ["Prospect", "En cours", "Terminée"])
-            submit_button = st.form_submit_button("Ajouter Affaire")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            affaire = selectionner_affaires(affaires)
+            delete_button = st.button("Effacer Affaire " + affaire.nom)
+            if delete_button:
+                DbSession.delete(affaire)
+                DbSession.commit()
+                st.success("Affaire effacée avec succès.")
+                st.rerun()
+            
+            create_button = st.button("Créer une Affaire")
+            if create_button:
+                
+                affaire = Affaire(nom="Nouvelle affaire", description="Description", type="Autre", montant="10000", state="Prospect")
+                DbSession.add(affaire)
+                DbSession.commit()
 
-            if submit_button:
-                nouvelle_affaire = Affaire(nom=nom, description=description, type=type_affaire, montant=montant, state=state)
-                session.add(nouvelle_affaire)
-                session.commit()
-                st.success("Affaire ajoutée avec succès.")
-                st.experimental_rerun()
+                st.success("Affaire Créer avec succès.")
+                st.rerun()
+            
+        with col2:
+            # Formulaire pour maj une affaire
+            with st.form(key='affaire_form'):
+                types = ["SUPERVISION DE TRAVAUX", "MAITRISE D'OEUVRE", "DIRECTION DE PROJET", "AUTRE"]
+                states = ["Prospect", "En cours", "Terminée"]
+
+                # Trouver les index des valeurs actuelles
+                index_state = trouver_index(affaire.state, states)
+                index_type = trouver_index(affaire.type, types)
+                
+                # Afficher les valeurs actuelles pour le toast (pour le débogage)
+                st.toast(f"Affaire traitée : {st.session_state.current_affaire.nom}")
+                
+                # Champs de saisie du formulaire
+                nom = st.text_input("Nom de l'affaire", value=affaire.nom)
+                description = st.text_area("Description", value=affaire.description)
+                montant = st.number_input("Montant total", min_value=0.0, value=affaire.montant)
+                type_affaire = st.selectbox("Type d'affaire", types, index=index_type)
+                state = st.selectbox("État de l'affaire", states, index=index_state)
+                
+                update_button = st.form_submit_button("Mettre à jour")
+                if update_button:
+                    # Mettre à jour l'affaire existante
+                    affaire.nom = nom
+                    affaire.description = description
+                    affaire.montant = montant
+                    affaire.type = type_affaire
+                    affaire.state = state
+                    
+                    # Commit les changements dans la base de données
+                    DbSession.commit()
+                    
+                    # Afficher un message de succès
+                    st.success("Affaire mise à jour avec succès.")
+                    
+                    # Redémarrer l'application pour refléter les changements
+                    # st.rerun()
+
+        with col3:
+            #affaires = get_entity_dataframe(DbSession, table_class=Affaire)
+            
+            for affaire in affaires:
+                text = f"{affaire.nom} - {affaire.state} - Type: {affaire.type}, Montant: {affaire.montant}"
+                if affaire.state =="Terminée":
+                    st.error(text)
+                elif affaire.state =="En cours":
+                    st.success(text)
+                elif affaire.state =="Prospect":
+                    st.warning(text)                
+        
 
     with tab_intervenants:
         # Sélectionner une affaire pour voir ses intervenants
-        affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: session.query(Affaire).get(id).nom)
-        affaire = session.query(Affaire).get(affaire_id)
-        afficher_intervenants(affaire)
-        ajouter_intervenant(affaire)
+        #affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
+        col1, col2 = st.columns(2)
+        with col1 : 
+            ajouter_intervenant(st.session_state.current_affaire)
+        with col2 : 
+            afficher_intervenants(st.session_state.current_affaire)
 
     with tab_macrolots:
         # Sélectionner une affaire pour voir ses macrolots
-        affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: session.query(Affaire).get(id).nom, key='macrolots_affaire')
-        affaire = session.query(Affaire).get(affaire_id)
-        afficher_macrolots(affaire)
+        # affaire = DbSession.query(Affaire).get(st.session_state.current_affaire.id)
+        col1, col2 = st.columns(2)
+        with col1 : 
+            ajouter_macrolot(st.session_state.current_affaire)
+        with col2 : 
+            afficher_macrolots(st.session_state.current_affaire)
+        
 
     with tab_lots:
         # Sélectionner un macrolot pour ajouter un lot
-        macrolot_id = st.selectbox("Sélectionner un macrolot", [macrolot.id for affaire in affaires for macrolot in affaire.macrolots], format_func=lambda id: session.query(Macrolot).get(id).nom)
-        macrolot = session.query(Macrolot).get(macrolot_id)
-        ajouter_lot(macrolot)
+        macrolot_id = st.selectbox("Sélectionner un macrolot", [macrolot.id for affaire in affaires for macrolot in affaire.macrolots], format_func=lambda id: DbSession.query(Macrolot).get(id).nom)
+        macrolot = DbSession.query(Macrolot).get(macrolot_id)
+        if not macrolot is None:
+            ajouter_lot(macrolot)
 
 
 if __name__ == "__main__":

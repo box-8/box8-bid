@@ -18,6 +18,8 @@ def init_session():
             "Moteur LM Studio ou ollama en local sur le port 1552", 
             "Modèle Open AI GPT-3-turbo"]
 
+    if "current_affaire" not in st.session_state:
+        st.session_state.current_affaire = None  
 init_session()
 
 

@@ -1,23 +1,29 @@
 import streamlit as st
 from utils.Session import init_session
 init_session()
-
 st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🤖", layout="wide") 
-st.title("Box 8 : la boite à outils du consultant augmenté")
+
+st.title("Box 8 : boite à outils")
+
+
+
+selected_llm = st.sidebar.radio(
+        "Choose LLM",
+        st.session_state.llm_allowed,
+        captions=st.session_state.llm_allowed_def,
+        key="selected_llm_options"
+    )
+if selected_llm :
+    st.session_state.llm_model = selected_llm
+    
+    
     
 tab1, tab2 = st.tabs(["Home","Options"])
 
 with tab2:
     st.subheader("Options")
     
-    selected_llm = st.sidebar.radio(
-            "Choose LLM",
-            st.session_state.llm_allowed,
-            captions=st.session_state.llm_allowed_def,
-            key="selected_llm_options"
-        )
-    if selected_llm :
-        st.session_state.llm_model = selected_llm
+
 
 st.toast(st.session_state.llm_model)
 

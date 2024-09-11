@@ -3,6 +3,16 @@ import os
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 
+
+            
+def trouver_index(valeur, tableau):
+    try:
+        index = tableau.index(valeur)
+        return index
+    except ValueError:
+        return 0
+
+
 def init_session():
     if "llm_model" not in st.session_state:
         st.session_state.llm_model = 'openai'  
@@ -18,8 +28,6 @@ def init_session():
             "Moteur LM Studio ou ollama en local sur le port 1552", 
             "Modèle Open AI GPT-3-turbo"]
 
-    if "current_affaire" not in st.session_state:
-        st.session_state.current_affaire = None  
 init_session()
 
 

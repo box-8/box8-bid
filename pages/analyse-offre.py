@@ -5,14 +5,24 @@ import tempfile
 from crewai_tools import PDFSearchTool
 from docx import Document
 from dotenv import load_dotenv
-from utils.Session import ChooseLLM
-
+from utils.Session import ChooseLLM, trouver_index, init_session
 from utils.Agents import Commercial, Consultant
 from utils.Functions import toast, extraire_tableau_json, DocumentWriter
 
-load_dotenv()
+st.set_page_config(page_title="Analyse d'Offres", page_icon="💵", layout="wide") 
 
-st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🤖", layout="wide") 
+init_session()
+
+
+idx = trouver_index(st.session_state.llm_model, st.session_state.llm_allowed)
+selected_llm = st.sidebar.radio("Choose LLM",
+        st.session_state.llm_allowed,
+        captions=st.session_state.llm_allowed_def,
+        key="selected_llm_options",
+        index=idx
+    )
+if selected_llm :
+    st.session_state.llm_model = selected_llm
 
 #tableau dans lequel on va stocker les Agents commerciaux
 agents_commerciaux: List[Commercial] = []

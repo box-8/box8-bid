@@ -3,14 +3,29 @@ import streamlit as st
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant, get_entity_dataframe
-from utils.Session import SQL_LITE_AFFAIRES_PATH
+from utils.Session import SQL_LITE_AFFAIRES_PATH, init_session, trouver_index
+
+st.set_page_config(page_title="Gestion des Affaires", page_icon="🕴️", layout="wide") 
+init_session()
+
+idx = trouver_index(st.session_state.llm_model, st.session_state.llm_allowed)
+selected_llm = st.sidebar.radio("Choose LLM",
+        st.session_state.llm_allowed,
+        captions=st.session_state.llm_allowed_def,
+        key="selected_llm_options",
+        index=idx
+    )
+if selected_llm :
+    st.session_state.llm_model = selected_llm
+
+
+
 
 # Initialisation de la base de données
 engine = create_engine(SQL_LITE_AFFAIRES_PATH)
 Session = sessionmaker(bind=engine)
 DbSession = Session()
 
-st.set_page_config(page_title="Gestion des Chantiers", page_icon="🏉", layout="wide") 
 
 # Fonction pour afficher les intervenants
 def afficher_intervenants(affaire):
@@ -63,16 +78,44 @@ def ajouter_macrolot(affaire):
             st.rerun()
 
 # Fonction pour afficher les macrolots et leurs lots
+# Fonction pour afficher les macrolots et leurs lots
 def afficher_macrolots(affaire):
     st.subheader(f"Macrolots pour {affaire.nom}")
-    for macrolot in affaire.macrolots:
-        st.write(f"Macrolot: {macrolot.nom}, Type: {macrolot.type}, Montant Total: {macrolot.montant}")
-        for lot in macrolot.lots:
-            st.success(f" - Lot: {lot.categorie}, Montant Commande: {lot.montant_commande}")
-            if st.button(f"Supprimer Lot {lot.id}", key=f"delete_lot_{lot.id}"):
+    
+    # Si l'affaire n'a pas de macrolots
+    if not affaire.macrolots:
+        st.write("Aucun macrolot disponible pour cette affaire.")
+        return
+    
+    # Sélectionner un macrolot parmi ceux de l'affaire
+    macrolot_ids = [macrolot.id for macrolot in affaire.macrolots]
+    macrolot_selectionne_id = st.radio(
+        "Sélectionner un macrolot", 
+        macrolot_ids, 
+        format_func=lambda id: DbSession.query(Macrolot).get(id).nom
+    )
+    
+    # Récupérer le macrolot sélectionné
+    macrolot_selectionne = DbSession.query(Macrolot).get(macrolot_selectionne_id)
+    
+    if macrolot_selectionne:
+        # Affichage du macrolot sélectionné
+        st.write(f"Macrolot sélectionné: {macrolot_selectionne.nom}, Type: {macrolot_selectionne.type}, Montant Total: {macrolot_selectionne.montant}")
+        
+        # Bouton pour supprimer le macrolot sélectionné
+        if st.button(f"Supprimer le Macrolot {macrolot_selectionne.nom}", key=f"delete_macrolot_{macrolot_selectionne.id}"):
+            # Supprimer les lots associés et le macrolot
+            for lot in macrolot_selectionne.lots:
                 DbSession.delete(lot)
-                DbSession.commit()
-                st.rerun()
+            DbSession.delete(macrolot_selectionne)
+            DbSession.commit()
+            st.success(f"Macrolot {macrolot_selectionne.nom} supprimé avec succès.")
+            st.rerun()
+
+        # Mettre à jour la liste des lots pour l'onglet numéro 4
+        st.session_state.selected_macrolot_lots = macrolot_selectionne.lots
+       
+
 
 # Fonction pour ajouter un lot à un macrolot
 def ajouter_lot(macrolot):
@@ -97,13 +140,6 @@ def ajouter_lot(macrolot):
             st.success("Lot ajouté avec succès.")
             st.experimental_rerun()
             
-            
-def trouver_index(valeur, tableau):
-    try:
-        index = tableau.index(valeur)
-        return index
-    except ValueError:
-        return 0
 
 def selectionner_affaires(affaires):
     affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
@@ -113,7 +149,7 @@ def selectionner_affaires(affaires):
     
 # Gestion des affaires
 def gerer_affaires():
-    st.title("Gestion des Affaires")
+    st.title(f"Gestion des Affaires ({st.session_state.llm_model})")
 
     # Onglets pour gérer chaque section
     tab_affaires, tab_intervenants, tab_macrolots, tab_lots = st.tabs(["Affaires", "Intervenants", "Macrolots", "Lots"])

@@ -4,6 +4,111 @@ from utils.Session import *
 from utils.Functions import extraire_tableau_json
 
 
+
+
+
+class RagAgent() :
+    def __init__(self, name: str = "", tool: PDFSearchTool = None):
+        self.name = name
+        self.tool = tool
+        
+        self.research_agent = Agent(
+            role="Agent de Recherche",
+            goal="Rechercher dans le PDF pour trouver des réponses pertinentes",
+            allow_delegation=False,
+            verbose=True,
+            backstory=(
+                """
+                L'agent de recherche est compétent pour rechercher et 
+                extraire des données des documents, garantissant des réponses précises.
+                """
+            ),
+            tools=[self.tool],
+            llm = ChooseLLM()
+        )
+
+            
+        self.professional_writer_agent = Agent(
+            role="Rédacteur Professionnel",
+            goal="Rédiger des réponses professionnelles basés sur les résultats de l'agent de recherche",
+            allow_delegation=False,
+            verbose=True,
+            backstory=(
+                """
+                L'agent rédacteur professionnel possède d'excellentes compétences en rédaction 
+                et est capable de rédiger des réponses claires et concises en fonction des informations fournies.
+                Si une information n'est pas disponible dans le texte fourni, 
+                l'Agent rédacteur professionnel le précise clairement en posant une question adaptée au contexte.
+                """
+            ),
+            tools=[],
+            llm = ChooseLLM()
+        )
+        
+        self.crewresult = ""
+
+    def answer(self,question): 
+        global docAnalyse
+        # --- Tasks ---
+        self.answer_customer_question_task = Task(
+            description=(
+                """
+                Répondez à la question ci-dessous en vous basant uniquement sur les informations pertinentes.
+                Si aucune indication n'existe sur la question posée, précisez-le. 
+                Voici la question :
+                {customer_question}
+                """
+            ),
+            expected_output="""
+                Fournir des réponses claires et concises aux questions strictement basées sur le texte à analyser.
+                """,
+            tools=[self.tool],
+            agent=self.research_agent,
+        )
+
+        self.write_email_task = Task(
+            description=(
+                """
+                Reprennant les conclusions de l'agent de recherche et proposer des solutions aux problèmes soulevés.
+                """
+            ),
+            expected_output="""
+                Rédiger un texte clair concis.
+                """,
+            tools=[],
+            agent=self.professional_writer_agent,
+        )
+
+        # --- Crew ---
+        self.crew = Crew(
+                agents=[self.research_agent, self.professional_writer_agent],
+                tasks=[self.answer_customer_question_task, self.write_email_task],
+                process=Process.sequential,
+            )
+        try : 
+            result = self.crew.kickoff(inputs={"customer_question": question})
+
+            # Normaliser le résultat sous forme de chaîne de caractères
+            if isinstance(result, tuple):
+                # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
+                result = "\n".join(map(str, result))
+            elif isinstance(result, list):
+                # Si c'est une liste, on la convertit également en chaîne
+                result = "\n".join(result)
+            elif isinstance(result, dict):
+                # Si c'est un dictionnaire, formater chaque paire clé-valeur
+                result = "\n".join(f"{key}: {value}" for key, value in result.items())
+            else:
+                # Assurer que le résultat est bien une chaîne
+                result = str(result)
+
+            return result
+        except Exception as e:
+            print(f"Erreur lors de l'appel de Commercial.answer : {e}")
+            return e 
+
+
+
 # --- Classe Commercial ---
 class Commercial() :
     def __init__(self, name: str = "", offre: PDFSearchTool = None):

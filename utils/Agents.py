@@ -20,7 +20,7 @@ class RagAgent() :
             backstory=(
                 """
                 L'agent de recherche est compétent pour rechercher et 
-                extraire des données des documents, garantissant des réponses précises.
+                extraire des données des documents, garantissant des réponses précises sur des éléments pertinents.
                 """
             ),
             tools=[self.tool],
@@ -35,10 +35,10 @@ class RagAgent() :
             verbose=True,
             backstory=(
                 """
-                L'agent rédacteur professionnel possède d'excellentes compétences en rédaction 
-                et est capable de rédiger des réponses claires et concises en fonction des informations fournies.
+                L'agent rédacteur professionnel possède d'excellentes capacités rédactionnelles.
+                Il rédige des réponses claires et concises uniquement basées sur les informations fournies.
                 Si une information n'est pas disponible dans le texte fourni, 
-                l'Agent rédacteur professionnel le précise clairement en posant une question adaptée au contexte.
+                l'Agent rédacteur professionnel le précise clairement dans un paragraphe et en lettres majuscules.
                 """
             ),
             tools=[],
@@ -53,14 +53,14 @@ class RagAgent() :
         self.answer_customer_question_task = Task(
             description=(
                 """
-                Répondez à la question ci-dessous en vous basant uniquement sur les informations pertinentes.
+                Répondez à la question ci-dessous en vous basant uniquement sur les informations présentes.
                 Si aucune indication n'existe sur la question posée, précisez-le. 
                 Voici la question :
                 {customer_question}
                 """
             ),
             expected_output="""
-                Fournir des réponses claires et concises aux questions strictement basées sur le texte à analyser.
+                Fournir des réponses claires et concises aux questions basées strictement sur le texte à analyser.
                 """,
             tools=[self.tool],
             agent=self.research_agent,
@@ -69,7 +69,7 @@ class RagAgent() :
         self.write_email_task = Task(
             description=(
                 """
-                Reprennant les conclusions de l'agent de recherche et proposer des solutions aux problèmes soulevés.
+                Reprendre les conclusions de l'agent de recherche et en rédiger la synthèse.
                 """
             ),
             expected_output="""
@@ -104,7 +104,7 @@ class RagAgent() :
 
             return result
         except Exception as e:
-            print(f"Erreur lors de l'appel de Commercial.answer : {e}")
+            print(f"Erreur lors de l'appel à RagAgent : {e}")
             return e 
 
 
@@ -157,7 +157,7 @@ class Commercial() :
             description=(
                 """
                 Répondez à la question ci-dessous en vous basant uniquement sur l'offre fournie.
-                Si L'offre ne donne ne donne aucune indication sur la question posée, précisez-le et proposez une modification 
+                Si L'offre ne donne aucune indication sur la question posée, précisez-le et proposez des améliorations 
                 en suggérant une question adaptée. 
                 Voici la question :
                 {customer_question}
@@ -165,7 +165,6 @@ class Commercial() :
             ),
             expected_output="""
                 Fournir des réponses claires et concises aux questions strictement basées sur le contenu de l'offre à analyser.
-                
                 """,
             tools=[self.offre],
             agent=self.research_agent,
@@ -175,8 +174,9 @@ class Commercial() :
             description=(
                 """
                 Analysez l'offre en la comparant au cahier des charges à partir des éléments fournis : 
-                1- Résumer les solutions proposées pour répondre aux enjeux. 
-                2- Indiquer les manquements qui ne correspondent pas aux exigences en précisant les corrections nécessaires.
+                1- Si L'offre ne donne aucune indication sur la question posée, précisez-le en majuscule
+                2- Sinon, résumer les solutions proposées pour répondre à l'enjeu. 
+                et Indiquer les manquements qui ne correspondent pas aux exigences en précisant les corrections nécessaires.
                 """
             ),
             expected_output="""

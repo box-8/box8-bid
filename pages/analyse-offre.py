@@ -1,12 +1,13 @@
 import os
 from typing import List
+from crewai import Agent, Crew, Task
 import streamlit as st 
 import tempfile
 from crewai_tools import PDFSearchTool
 from docx import Document
 from dotenv import load_dotenv
 from utils.Session import ChooseLLM, trouver_index, init_session
-from utils.Agents import Commercial, Consultant
+from utils.Agents import Commercial, Consultant, RagAgent
 from utils.Functions import toast, extraire_tableau_json, DocumentWriter
 
 st.set_page_config(page_title="Analyse d'Offres", page_icon="💵", layout="wide") 
@@ -100,7 +101,7 @@ if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
         cctp_pdf_search_tool = PDFSearchTool(pdf=cctp_temp_pdf_path)    
         gaelJaunin = Consultant(cctp_pdf_search_tool)
         questionsGaelJaunin = gaelJaunin.analyse_cctp()
-        st.write(questionsGaelJaunin)
+        #st.write(questionsGaelJaunin)
         agents_commerciaux.append(create_Commercial(offre_uploaded_1))
         agents_commerciaux.append(create_Commercial(offre_uploaded_2))
         agents_commerciaux.append(create_Commercial(offre_uploaded_3))
@@ -114,21 +115,125 @@ if st.button("Commencer l'analyse du CCTP", key="analisys_cctp") :
             # on Créé un document word
             rapportGaelJAUNIN = DocumentWriter("Rapport d'analyse d'offres")
             
+            # Initialiser la liste pour stocker les questions et réponses
+            questions_reponses = []
+
+            # Première boucle pour capturer les réponses de chaque commercial
             for i, commercial in enumerate(agents_commerciaux):
                 Chapter = f"Commercial {i+1} : {commercial.name} "
                 rapportGaelJAUNIN.Chapter(Chapter)
                 st.markdown(f"## {Chapter}")
+
                 for entry in questionsGaelJaunin:
                     enjeu = entry["enjeu"]
                     question = entry["question"]
+
                     rapportGaelJAUNIN.SubChapter(f"{enjeu}")
                     rapportGaelJAUNIN.writeBlue(f"{question}")
+
+                    # Obtenir la réponse du commercial
                     answer = commercial.answer(question)
+
+                    # Écrire la réponse dans le rapport
                     rapportGaelJAUNIN.writeBlack(answer)
                     st.subheader(f"{question}")
                     st.markdown(f"{answer}")
+
+                    # Stocker la question, le commercial et sa réponse
+                    questions_reponses.append({
+                        "question": question,
+                        "commercial": commercial.name,
+                        "response": answer,
+                        "enjeu": enjeu,
+                    })
+
+            # Sauvegarder le rapport
             docPath = rapportGaelJAUNIN.saveDocument()
-            button = st.button(f"Ouvrir le rapport",key="wordfinished")
+            button = st.button(f"Ouvrir le rapport", key="wordfinished")
             if button: 
                 os.startfile(docPath)
             
+            # Étape 2 : Créer un tableau comparatif des réponses
+            tableau_comparatif = {}
+
+            # Boucle pour chaque question afin d'analyser et comparer les réponses
+            for question_entry in questionsGaelJaunin:
+                question = question_entry["question"]
+
+                # Extraire les réponses pour cette question spécifique
+                reponses_pour_question = [entry for entry in questions_reponses if entry["question"] == question]
+
+                # Créer une entrée dans le tableau comparatif pour cette question
+                tableau_comparatif[question] = {}
+
+                for entry in reponses_pour_question:
+                    commercial = entry["commercial"]
+                    response = entry["response"]
+
+                    # Ajouter la réponse du commercial à la question
+                    tableau_comparatif[question][commercial] = response
+
+            # Afficher le tableau comparatif (ou le stocker)
+            #st.write("Tableau comparatif des réponses :")
+            ## st.write(tableau_comparatif)
+            
+            # Etape 3 Générere une question pour créer le tableau comparatif 
+            for question, reponses in tableau_comparatif.items():
+                Question = ""
+                print(f"Question : {question}")
+                Question += f"""
+                A la question : {question}
+                
+                """
+                # Boucle pour chaque entreprise et sa réponse
+                for entreprise, reponse in reponses.items():
+                    # print(f"  Entreprise : {entreprise}")
+                    # print(f"  Réponse : {reponse}")
+                    Question += f"""
+                    l'offre de l'entreprise "{entreprise}" indique : "{reponse}"
+                    """
+            
+            st.write(Question)
+            # Etape 43 Comparer les offres que les questions poszes 
+            goal = """
+                 Evaluer la qualité de la réponse de chaque entreprise dans un tableau json avec le format suivant : 
+                 [
+                     {"question":"résumé de la question",
+                     [
+                         {"entreprise":"évaluation de la réponse à la question posée sur une échelle de 1 à 10 "},
+                         ... entreprises suivantes
+                     },
+                     
+                 ]
+                """
+            agent = Agent(
+                role="fournir un classement des offres",
+                goal=goal,
+                allow_delegation=False,
+                verbose=True,
+                backstory=(
+                    """
+                    On souhaite comparer entre eux le contenu technique de plusieures offres 
+                    """
+                ),
+                llm = ChooseLLM()
+            )
+            task = Task(
+                description=(
+                    """
+                    retoruner l'analyse de l'agent dans un tableau json
+                    """
+                ),
+                expected_output="""
+                    json avec le format suivant demandè
+                    
+                    """,
+                tools=[],
+                agent=agent,
+            )
+            crew = Crew(
+                agents=[agent],
+                tasks=[task]
+            )
+            
+            st.write(crew.kickoff())

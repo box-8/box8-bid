@@ -61,21 +61,6 @@ def ajouter_intervenant(affaire):
             st.rerun()
 
 
-# Fonction pour ajouter les macrolots aux affaires
-def ajouter_macrolot(affaire):
-    st.subheader(f"Ajouter un macrolot pour {affaire.nom}")
-    with st.form(key='ajouter_macrolot'):
-        nom = st.text_input("Nom du macrolot")
-        type_macrolot = st.selectbox("Type de macrolot", ["génie civil", "équipement", "électricité", "autres"])  
-        montant = st.number_input("Montant", min_value=0.0, format="%.2f")
-        submit_button = st.form_submit_button("Ajouter Macrolot")
-
-        if submit_button:
-            macrolot = Macrolot(nom=nom, type=type_macrolot, montant=montant, affaire_id=affaire.id)
-            DbSession.add(macrolot)
-            DbSession.commit()
-            st.success("Macrolot ajouté avec succès.")
-            st.rerun()
 
 # Fonction pour afficher les macrolots et leurs lots
 # Fonction pour afficher les macrolots et leurs lots
@@ -85,23 +70,38 @@ def afficher_macrolots(affaire):
     # Si l'affaire n'a pas de macrolots
     if not affaire.macrolots:
         st.write("Aucun macrolot disponible pour cette affaire.")
-        return
+        
     
     # Sélectionner un macrolot parmi ceux de l'affaire
-    macrolot_ids = [macrolot.id for macrolot in affaire.macrolots]
-    macrolot_selectionne_id = st.radio(
+    macrolot_ids = [str(macrolot.id) for macrolot in affaire.macrolots]
+    macrolot_names = [macrolot.nom for macrolot in affaire.macrolots]
+    
+    radio_macrolots_options = []
+    montant_affaire = 0
+    for mcLot in affaire.macrolots : 
+        radio_macrolots_options.append(mcLot.nom)  
+        montant_affaire += mcLot.montant  
+    radio_macrolots_options.append("Nouveau Macrolot")
+    
+    
+    macrolot_selectionne_name = st.radio(
         "Sélectionner un macrolot", 
-        macrolot_ids, 
-        format_func=lambda id: DbSession.query(Macrolot).get(id).nom
+        options = radio_macrolots_options,
+        #format_func=lambda id: DbSession.query(Macrolot).get(id).nom + " - " + str(DbSession.query(Macrolot).get(id).montant)
     )
+    st.write(f"Montant de l'affaire {str(montant_affaire)}")
     
     # Récupérer le macrolot sélectionné
-    macrolot_selectionne = DbSession.query(Macrolot).get(macrolot_selectionne_id)
+    for mcLot in affaire.macrolots : 
+        if mcLot.nom == macrolot_selectionne_name:
+            macrolot_selectionne_id = mcLot.id 
+    try:
+        macrolot_selectionne = DbSession.query(Macrolot).get(macrolot_selectionne_id)
+    except Exception as e:
+        macrolot_selectionne = None
+    
     
     if macrolot_selectionne:
-        # Affichage du macrolot sélectionné
-        st.write(f"Macrolot sélectionné: {macrolot_selectionne.nom}, Type: {macrolot_selectionne.type}, Montant Total: {macrolot_selectionne.montant}")
-        
         # Bouton pour supprimer le macrolot sélectionné
         if st.button(f"Supprimer le Macrolot {macrolot_selectionne.nom}", key=f"delete_macrolot_{macrolot_selectionne.id}"):
             # Supprimer les lots associés et le macrolot
@@ -110,11 +110,51 @@ def afficher_macrolots(affaire):
             DbSession.delete(macrolot_selectionne)
             DbSession.commit()
             st.success(f"Macrolot {macrolot_selectionne.nom} supprimé avec succès.")
-            st.rerun()
+            #st.rerun()
 
         # Mettre à jour la liste des lots pour l'onglet numéro 4
         st.session_state.selected_macrolot_lots = macrolot_selectionne.lots
-       
+    else:
+        submit_button = st.button("Ajouter Macrolot")
+        if submit_button:
+            macrolot_selectionne = Macrolot(nom="nom", type="autres", montant=0, affaire_id=affaire.id)
+            DbSession.add(macrolot_selectionne)
+            DbSession.commit()
+            st.toast("Macrolot ajouté avec succès.")
+            st.rerun()
+    return macrolot_selectionne
+
+
+
+# Fonction pour mettre à jour u macrolot
+def update_macrolot (macrolot):
+    # st.subheader(f"{st.session_state.current_affaire.nom} / {macrolot.nom} ")
+    with st.form(key='update_macrolot'):
+        
+        types = ["génie civil", "équipement", "électricité", "autres"]
+        if macrolot is None:
+            type = types[0]
+            macrolot = Macrolot(id=0, nom="nom", type=type, montant=0.0, affaire_id= st.session_state.current_affaire.id)
+            index_type = trouver_index(macrolot.type, types)
+        else:
+            index_type = trouver_index(macrolot.type, types)
+        
+        nom = st.text_input("Nom du macrolot", value=macrolot.nom)
+        type_macrolot = st.selectbox("Type de macrolot", types, index=index_type)  
+        montant = st.number_input("Montant k€", value=macrolot.montant, min_value=0.0, format="%.2f")
+        
+
+        update_button = st.form_submit_button("Mettre à jour")
+        if update_button:
+            # Mettre à jour l'macrolot existante
+            macrolot.nom = nom
+            macrolot.montant = montant
+            macrolot.type = type_macrolot
+            DbSession.commit()
+            st.success("Macrolot mis à jour avec succès.")
+            #st.rerun()
+
+
 
 
 # Fonction pour ajouter un lot à un macrolot
@@ -139,14 +179,29 @@ def ajouter_lot(macrolot):
             DbSession.commit()
             st.success("Lot ajouté avec succès.")
             st.experimental_rerun()
-            
+
+
+
+
+
+
+
+         
 
 def selectionner_affaires(affaires):
     affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
     affaire = DbSession.query(Affaire).get(affaire_id)
     st.session_state.current_affaire = affaire
     return affaire
-    
+   
+   
+
+
+
+
+
+
+ 
 # Gestion des affaires
 def gerer_affaires():
     st.title(f"Gestion des Affaires ({st.session_state.llm_model})")
@@ -242,9 +297,9 @@ def gerer_affaires():
         # affaire = DbSession.query(Affaire).get(st.session_state.current_affaire.id)
         col1, col2 = st.columns(2)
         with col1 : 
-            ajouter_macrolot(st.session_state.current_affaire)
+            current_macrolot = afficher_macrolots(st.session_state.current_affaire)
         with col2 : 
-            afficher_macrolots(st.session_state.current_affaire)
+            update_macrolot(current_macrolot)
         
 
     with tab_lots:
@@ -253,6 +308,26 @@ def gerer_affaires():
         macrolot = DbSession.query(Macrolot).get(macrolot_id)
         if not macrolot is None:
             ajouter_lot(macrolot)
+
+
+
+
+# Fonction pour ajouter les macrolots aux affaires
+# def ajouter_macrolot(affaire):
+#     st.subheader(f"Ajouter un macrolot ")
+#     with st.form(key='ajouter_macrolot'):
+#         nom = st.text_input("Nom du macrolot")
+#         type_macrolot = st.selectbox("Type de macrolot", ["génie civil", "équipement", "électricité", "autres"])  
+#         montant = st.number_input("Montant", min_value=0.0, format="%.2f")
+        
+#         submit_button = st.form_submit_button("Ajouter Macrolot")
+
+#         if submit_button:
+#             macrolot = Macrolot(nom=nom, type=type_macrolot, montant=montant, affaire_id=affaire.id)
+#             DbSession.add(macrolot)
+#             DbSession.commit()
+#             st.success("Macrolot ajouté avec succès.")
+#             st.rerun()
 
 
 if __name__ == "__main__":

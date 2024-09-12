@@ -6,17 +6,9 @@ from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant
 from utils.Session import SQL_LITE_AFFAIRES_PATH, init_session, trouver_index
 
 st.set_page_config(page_title="Gestion des Affaires", page_icon="🕴️", layout="wide") 
+
 init_session()
 
-idx = trouver_index(st.session_state.llm_model, st.session_state.llm_allowed)
-selected_llm = st.sidebar.radio("Choose LLM",
-        st.session_state.llm_allowed,
-        captions=st.session_state.llm_allowed_def,
-        key="selected_llm_options",
-        index=idx
-    )
-if selected_llm :
-    st.session_state.llm_model = selected_llm
 
 
 
@@ -66,7 +58,7 @@ def ajouter_intervenant(affaire):
 # Fonction pour afficher les macrolots et leurs lots
 def afficher_macrolots(affaire):
     st.subheader(f"Macrolots pour {affaire.nom}")
-    
+    st.write("Les Macrolot désignent les entreprises qui possèdent les gros contrats sur le projet.")
     # Si l'affaire n'a pas de macrolots
     if not affaire.macrolots:
         st.write("Aucun macrolot disponible pour cette affaire.")
@@ -98,30 +90,36 @@ def afficher_macrolots(affaire):
     try:
         macrolot_selectionne = DbSession.query(Macrolot).get(macrolot_selectionne_id)
     except Exception as e:
+        st.session_state.key_macrolot_nom = ""
         macrolot_selectionne = None
     
     
     if macrolot_selectionne:
         # Bouton pour supprimer le macrolot sélectionné
-        if st.button(f"Supprimer le Macrolot {macrolot_selectionne.nom}", key=f"delete_macrolot_{macrolot_selectionne.id}"):
+        if st.button(f"Supprimer le Macrolot ", key=f"delete_macrolot_{macrolot_selectionne.id}"):
             # Supprimer les lots associés et le macrolot
             for lot in macrolot_selectionne.lots:
                 DbSession.delete(lot)
             DbSession.delete(macrolot_selectionne)
             DbSession.commit()
             st.success(f"Macrolot {macrolot_selectionne.nom} supprimé avec succès.")
-            #st.rerun()
+            st.rerun()
 
         # Mettre à jour la liste des lots pour l'onglet numéro 4
         st.session_state.selected_macrolot_lots = macrolot_selectionne.lots
     else:
-        submit_button = st.button("Ajouter Macrolot")
-        if submit_button:
-            macrolot_selectionne = Macrolot(nom="nom", type="autres", montant=0, affaire_id=affaire.id)
-            DbSession.add(macrolot_selectionne)
-            DbSession.commit()
-            st.toast("Macrolot ajouté avec succès.")
-            st.rerun()
+        pass
+    submit_button = st.button("Ajouter Macrolot")
+    if submit_button:
+        nom = st.session_state.get("key_macrolot_nom", "")
+        type = st.session_state.get("key_macrolot_type", "")
+        montant = st.session_state.get("key_macrolot_montant", "")
+        
+        macrolot_selectionne = Macrolot(nom=nom, type=type, montant=montant, affaire_id=affaire.id)
+        DbSession.add(macrolot_selectionne)
+        DbSession.commit()
+        st.toast("Macrolot ajouté avec succès.")
+        st.rerun()
     return macrolot_selectionne
 
 
@@ -134,14 +132,17 @@ def update_macrolot (macrolot):
         types = ["génie civil", "équipement", "électricité", "autres"]
         if macrolot is None:
             type = types[0]
-            macrolot = Macrolot(id=0, nom="nom", type=type, montant=0.0, affaire_id= st.session_state.current_affaire.id)
+            nom = st.session_state.get("key_macrolot_nom", "")
+            type = st.session_state.get("key_macrolot_type", "")
+            
+            macrolot = Macrolot(id=0, nom=nom, type=type, montant=0.0, affaire_id= st.session_state.current_affaire.id)
             index_type = trouver_index(macrolot.type, types)
         else:
             index_type = trouver_index(macrolot.type, types)
         
-        nom = st.text_input("Nom du macrolot", value=macrolot.nom)
-        type_macrolot = st.selectbox("Type de macrolot", types, index=index_type)  
-        montant = st.number_input("Montant k€", value=macrolot.montant, min_value=0.0, format="%.2f")
+        nom = st.text_input("Entreprise du macrolot", value=macrolot.nom, key="key_macrolot_nom")
+        type_macrolot = st.selectbox("Type de macrolot", types, index=index_type, key="key_macrolot_type")  
+        montant = st.number_input("Montant k€", value=macrolot.montant, min_value=0.0, format="%.2f", key="key_macrolot_montant")
         
 
         update_button = st.form_submit_button("Mettre à jour")
@@ -151,8 +152,14 @@ def update_macrolot (macrolot):
             macrolot.montant = montant
             macrolot.type = type_macrolot
             DbSession.commit()
-            st.success("Macrolot mis à jour avec succès.")
-            #st.rerun()
+            st.toast("Macrolot mis à jour avec succès")
+            st.rerun()
+
+
+
+
+
+
 
 
 

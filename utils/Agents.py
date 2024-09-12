@@ -3,7 +3,7 @@ from crewai_tools import PDFSearchTool
 from utils.Session import *
 from utils.Functions import extraire_tableau_json
 
-
+init_session()
 
 
 
@@ -55,7 +55,7 @@ class RagAgent() :
                 """
                 Répondez à la question ci-dessous en vous basant uniquement sur les informations présentes.
                 Si aucune indication n'existe sur la question posée, précisez-le. 
-                Voici la question :
+                Voici la question (répondez dans la langue de la question) :
                 {customer_question}
                 """
             ),
@@ -222,6 +222,7 @@ class Commercial() :
 class Consultant():
     def __init__(self, cctp : PDFSearchTool):
         self.cctp_pdf_search_tool = cctp
+        
         self.ingenieur_generaliste = Agent(
             role="Chef de projet",
             goal="Ingénieur généraliste le chef de projet pose les questions pertinentes permettant de comparer des offres",

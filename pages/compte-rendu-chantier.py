@@ -1,24 +1,14 @@
 import os
 import tempfile
 import streamlit as st 
-from utils.Session import trouver_index,init_session
+from utils.Session import *
 from utils.Agents import RagAgent
 from crewai_tools import PDFSearchTool
 
 st.set_page_config(page_title="Compte Rendu de Chantier", page_icon="🎙️", layout="wide") 
 
 init_session()
-
-idx = trouver_index(st.session_state.llm_model, st.session_state.llm_allowed)
-selected_llm = st.sidebar.radio("Choose LLM",
-        st.session_state.llm_allowed,
-        captions=st.session_state.llm_allowed_def,
-        key="selected_llm_options",
-        index=idx
-    )
-if selected_llm :
-    st.session_state.llm_model = selected_llm
-
+ui_options_llmModel()
 
 
 st.header("Compte rendu de chantier (" + st.session_state.llm_model+")")

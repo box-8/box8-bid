@@ -19,6 +19,8 @@ def init_session():
     init_session_llm()
     init_session_llm_vision()
 
+
+
 def init_session_llm():
     # -- modeles de langage
     if "llm_allowed" not in st.session_state:

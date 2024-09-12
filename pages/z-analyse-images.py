@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.ImageChatter import ImageChatter
+from utils.Chats import ImageChatter
 from PIL import Image
 import base64
 import io

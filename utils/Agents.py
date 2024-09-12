@@ -5,6 +5,82 @@ from utils.Functions import extraire_tableau_json
 
 init_session()
 
+class Rag():
+    def __init__(self, tool: PDFSearchTool = None):
+        self.tool = tool
+        self.answer = ""
+        self.research_agent = Agent(
+            role="Assistant de lecture",
+            goal="Trouver la réponse pertinente à une question en recherchant dans un document",
+            allow_delegation=False,
+            verbose=True,
+            backstory=(
+                """
+                L'agent de recherche est compétent pour rechercher et extraire des données d'un document.
+                Si aucun information n'est pertinente, il le précise en majuscules
+                """
+            ),
+            tools=[self.tool],
+            llm = ChooseLLM()
+        )
+    
+    def set_doc(self, path):
+        self.tool = PDFSearchTool(path=path)
+        self.__init__(tool = self.tool)
+         
+    
+    def ask(self,question): 
+        # --- Tasks ---
+        self.task = Task(
+            description=(
+                """
+                Répondez à la question ci-dessous en vous basant uniquement sur les informations présentes dans le document :
+                {customer_question}
+                """
+            ),
+            expected_output="""
+                Une réponses claire et concise à la question basées strictement sur le texte à analyser.
+                Répondez dans la langue de la question
+                """,
+            tools=[self.tool],
+            agent=self.research_agent,
+        )
+        # --- Crew ---
+        self.crew = Crew(
+                agents=[self.research_agent],
+                tasks=[self.task],
+                process=Process.sequential,
+            )
+        try : 
+            result = self.crew.kickoff(inputs={"customer_question": question})
+
+            # Normaliser le résultat sous forme de chaîne de caractères
+            if isinstance(result, tuple):
+                # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
+                self.answer = "\n".join(map(str, result))
+            elif isinstance(result, list):
+                # Si c'est une liste, on la convertit également en chaîne
+                self.answer = "\n".join(result)
+            elif isinstance(result, dict):
+                # Si c'est un dictionnaire, formater chaque paire clé-valeur
+                self.answer = "\n".join(f"{key}: {value}" for key, value in result.items())
+            else:
+                # Assurer que le résultat est bien une chaîne
+                self.answer = str(result)
+            return self.answer
+        except Exception as e:
+            print(f"Erreur lors de l'appel à Rag : {e}")
+            return e 
+
+
+
+
+
+
+
+
+
+
 
 
 class RagAgent() :

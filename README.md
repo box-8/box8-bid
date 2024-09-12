@@ -7,5 +7,5 @@ En version 1 les fonctionnalités sont les suivantes:
 - Base de données relationnelle SQL Lite pour la définition et gestion des affaires du maître d'œuvre
 - Génération automatisée pour une affaire des rapports d'analyse d'offres sur les lots de construction
 - Automatisation de la Rédaction des comptes rendus de chantiers successifs
--- Etat d'avancement du chantier par analyse d'images
+- Etat d'avancement du chantier par analyse d'images
   

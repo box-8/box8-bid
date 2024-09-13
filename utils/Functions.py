@@ -66,7 +66,7 @@ class DocumentWriter():
     
     def writeBlue(self,text):
         paragraph = self.docAnalyse.add_paragraph(text)
-        paragraph.style.font.color.rgb = RGBColor(0, 0, 255)
+        paragraph.style.font.color.rgb = RGBColor(0, 0, 75)
         
     def writeDocument(self, text, heading_level=None, color=RGBColor(0, 0, 0)): # Noir par défaut
         """
@@ -96,11 +96,15 @@ class DocumentWriter():
     # writeDocument("Et voici un paragraphe en rouge vif.")
 
 
-    def saveDocument(self):
+    def saveDocument(self,name=None):
         self.docAnalyse  # Indique que vous utilisez la variable globale à l'intérieur de la fonction
         # Save the Word document
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"result_{timestamp}.docx"
-        path = self.docAnalyse.save(filename) 
+        
+        if name is not None : 
+            path = self.docAnalyse.save(f"{name}-{timestamp}.docx")
+        else:
+            path = self.docAnalyse.save(filename)
         return path
 

@@ -22,6 +22,9 @@ with col1:
 with col2:
     if st.button("Reset chat"):
         chat.reset_history()
+    if st.button("Save to doc"):
+        chat.saveToDoc()
+    
 with col3:
     file_upload = st.file_uploader("Télécharger le CCTP", type="pdf")
 
@@ -30,7 +33,7 @@ chat.chat()
 if file_upload:
 
     try :
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+        with tempfile.NamedTemporaryFile(delete=False, type=["jpg", "jpeg", "png"]) as temp:
             temp.write(file_upload.read())
         rag = Rag()
         rag.set_doc(path=temp.name)

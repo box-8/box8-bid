@@ -7,6 +7,7 @@ from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
+from utils.Functions import DocumentWriter
 from utils.Session  import *
 
 
@@ -43,7 +44,18 @@ class BasicChat():
         for mot in mots:
             yield mot + " "
             
-            
+    def saveToDoc(self):
+        doc = DocumentWriter("Chat")
+        doc.Chapter("context")
+        doc.writeBlack(self.context)
+        doc.Chapter("content")
+        for i, message in enumerate(self.history):
+            if i % 2 == 0:
+                doc.writeBlue(message.content)
+            else:
+                doc.writeBlack(message.content)
+        doc.saveDocument("")
+    
     # affichage de l'onglet chat simple
     def chat(self):
         # conversation
@@ -65,7 +77,7 @@ class BasicChat():
                 try:
                     response = st.write_stream(self.ask(user_query))
                 except Exception as e:
-                    response = st.write_stream(self.stream(e))
+                    response = f"({st.session_state.llm_model})     " + st.write_stream(self.stream(e))
             self.history.append(AIMessage(content=response))
 
     # fonction générique pour poser une question au LLM actif 

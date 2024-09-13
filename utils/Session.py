@@ -2,6 +2,7 @@ import streamlit as st
 import os
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI, OpenAI
+from objects.Affaires import Affaire
 
 # --- PATH de la base de données sqlite
 
@@ -18,8 +19,11 @@ def trouver_index(valeur, tableau):
 def init_session():
     init_session_llm()
     init_session_llm_vision()
-
-
+    init_session_affaire()
+    
+def init_session_affaire():
+    if "affaire" not in st.session_state:
+        st.session_state.affaire = Affaire(nom="") 
 
 def init_session_llm():
     # -- modeles de langage

@@ -54,6 +54,7 @@ class BasicChat():
         doc.writeBlack(self.context)
         doc.Chapter("content")
         for i, message in enumerate(self.history):
+            st.error(message.content)
             if i % 2 == 0:
                 doc.writeBlue(message.content)
             else:

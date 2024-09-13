@@ -11,18 +11,15 @@ from utils.Functions import DocumentWriter
 from utils.Session  import *
 
 
-
-
-
 init_session()
 
 
 class BasicChat():
     def __init__(self, context="Vous êtes un assistant technique."):
-        self.llm = ChooseLLM()
         self.history = []
         self.context = context
         self.setContext(self.context)
+        self.llm = ChooseLLM()
         
     def reset_history(self):
         self.history = []
@@ -97,25 +94,103 @@ class BasicChat():
 
 
 
-
-
-
-class ImageChatter ():
-    def __init__(self, image_path):
-        # Initialiser la session et choisir le modèle de vision
-        
-        self.llm = ChooseLLM()
+class BasicImageChatter(BasicChat):
+  
+    def __init__(self, context="Vous êtes un ingénieur en construction qui analyse des photos de chantier."):
         self.history = []
-        self.context = "Vous êtes un assistant technique."
+        self.context = context
+        self.setContext(self.context)
+        self.llm = ChooseVisionLLM() # Initialisation du LLM Cision
+
         
-        self.llm = ChooseVisionLLM()
-        self.image_base64 = image_base64
-        self.image = self.decode_image()
+    def main(self):
+        # Interface utilisateur pour télécharger une image
+        
+        self.uploaded_doc = st.file_uploader("Télécharger une image", type=["jpg", "png", "bmp", "jpeg"])
+        if self.uploaded_doc is not None:
+            # Si un fichier est uploadé, passer à la discussion
+            st.sidebar.image(self.uploaded_doc, caption="uploaded file")
+            self.chat()
+
+    
+    
+    def ask(self, query):
+        if self.uploaded_doc is not None:
+            try:
+                # Encodage de l'image en base64
+                image = self.uploaded_doc.read()
+                self.base64_image = base64.b64encode(image).decode("utf-8")
+                # Envoyer la requête au modèle avec l'image et la question
+                return self.get_response(query)
+            except Exception as e:
+                return f"Erreur lors de la lecture de l'image: {e}"
+        else:
+            return "Veuillez télécharger une image avant de poser une question."
+
+    
+    def completion(self, query=""):
+        
+        messages = [
+                {
+                "role": "system",
+                "content": self.context,
+                },
+                {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": f"{query}"},
+                    {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{self.base64_image}"
+                    },
+                    },
+                ],
+                }
+            ]
+        print(messages)
+        return self.llm.chat.completions.create(
+            model=self.llm_model_name, # not used
+            messages=messages,
+            max_tokens=1000,
+            stream=True,
+            )
+        
+    def get_response(self, query=""):
+        # Génération de la requête avec le modèle
+        if query =="":
+            return ""
+        try:
+            # Création du payload pour l'API LLM local
+                        
+            completion = self.completion()
+            
+            for chunk in completion:
+                if chunk.choices[0].delta.content:
+                    yield chunk
+        except Exception as e:
+            return f"Erreur lors de l'envoi de la requête: {e}"
+
+    
+
+
+
+# class ImageChatter ():
+#     def __init__(self, image_path):
+#         # Initialiser la session et choisir le modèle de vision
+        
+#         self.llm = ChooseLLM()
+#         self.history = []
+#         self.context = "Vous êtes un assistant technique."
+        
+#         self.llm = ChooseVisionLLM()
+#         self.image_base64 = image_base64
+#         self.image = self.decode_image()
         
 
-    def decode_image(self):
-        # Convertir l'image base64 en un objet PIL Image
-        image_data = base64.b64decode(self.image_base64)
-        image = Image.open(io.BytesIO(image_data))
-        return image
+#     def decode_image(self):
+#         # Convertir l'image base64 en un objet PIL Image
+#         image_data = base64.b64decode(self.image_base64)
+#         image = Image.open(io.BytesIO(image_data))
+#         return image
 

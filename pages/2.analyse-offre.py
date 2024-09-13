@@ -13,7 +13,9 @@ from utils.Functions import toast, extraire_tableau_json, DocumentWriter
 st.set_page_config(page_title="Analyse d'Offres", page_icon="💵", layout="wide") 
 
 init_session()
-ui_options_llmModel()
+
+if st.sidebar.button("Options"):
+    llm_options()
 
 
 #tableau dans lequel on va stocker les Agents commerciaux

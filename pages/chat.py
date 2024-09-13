@@ -9,15 +9,23 @@ st.set_page_config(page_title="Analyse d'Offres", page_icon="💵", layout="wide
 
 init_session()
 
+# -- Store chat in session
+if "chat" not in st.session_state:
+    st.session_state.chat = BasicChat()  
+chat = st.session_state.chat
 
-chat = BasicChat()
+col1, col2, col3 = st.columns(3)
 
-if st.button("Options"):
-    chat.options()
+with col1:
+    if st.button("Options"):
+        chat.options()
+with col2:
+    if st.button("Reset chat"):
+        chat.reset_history()
+with col3:
+    file_upload = st.file_uploader("Télécharger le CCTP", type="pdf")
 
-file_upload = st.file_uploader("Télécharger le CCTP", type="pdf")
 chat.chat()
-
 
 if file_upload:
 

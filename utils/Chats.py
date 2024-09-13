@@ -16,31 +16,27 @@ from utils.Session  import *
 init_session()
 
 
-@st.dialog("Modèles et Options")
-def llm_options(chat):
-    col1, col2 = st.columns(2)
-    with col1:
-        ui_options_llmModel(sidebar=False)
-    with col2:
-        ui_options_visionModel(sidebar=False)
-    modify_context = st.text_area("Context",chat.context)
-    if modify_context:
-        chat.context = modify_context
-
-
 class BasicChat():
-    def __init__(self):
+    def __init__(self, context="Vous êtes un assistant technique."):
         self.llm = ChooseLLM()
         self.history = []
-        self.context = "Vous êtes un assistant technique."
+        self.context = context
+        self.setContext(self.context)
+        
+    def reset_history(self):
+        self.history = []
+        self.setContext(self.context)
+        
     def setContext(self, context):
         newcontext = SystemMessage(content=context)
-        self.history[0] = newcontext
+        if len(self.history) == 0:# If the history is empty, append the context
+            self.history.append(newcontext)
+        else:
+            self.history[0] = newcontext# If the history has at least one element, replace the first one
         return newcontext
 
     def options(self,container=None):
         llm_options(self)
-    
     
     def stream(self, text=""):
         mots = text.split()
@@ -92,11 +88,15 @@ class BasicChat():
 
 
 
-class ImageChatter:
-    def __init__(self, image_base64):
+class ImageChatter ():
+    def __init__(self, image_path):
         # Initialiser la session et choisir le modèle de vision
-        init_session_llm_vision()
-        self.model = ChooseVisionLLM()
+        
+        self.llm = ChooseLLM()
+        self.history = []
+        self.context = "Vous êtes un assistant technique."
+        
+        self.llm = ChooseVisionLLM()
         self.image_base64 = image_base64
         self.image = self.decode_image()
         

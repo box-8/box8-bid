@@ -155,6 +155,23 @@ def ChooseVisionLLM(model_name=""):
     
     return selected_llm
         
+        
+
+
+
+@st.dialog("Modèles et Options")
+def llm_options(chat=None):
+    col1, col2 = st.columns(2)
+    with col1:
+        ui_options_llmModel(sidebar=False)
+    with col2:
+        ui_options_visionModel(sidebar=False)
+      
+    if chat is not None:
+        modify_context = st.text_area("Context",chat.context)
+        if modify_context:
+            chat.setContext(modify_context)
+
 
 
 

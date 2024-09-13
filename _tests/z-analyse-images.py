@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.Chats import ImageChatter
+from utils.Chats import BasicImageChatter
 from PIL import Image
 import base64
 import io
@@ -25,7 +25,7 @@ if uploaded_file is not None:
     image_base64 = image_to_base64(image)
 
     # Instancier la classe ImageChatter avec l'image en base64
-    image_chatter = ImageChatter(image_base64)
+    image_chatter = BasicImageChatter(image_base64)
 
     # Afficher l'image
     image_chatter.display_image()

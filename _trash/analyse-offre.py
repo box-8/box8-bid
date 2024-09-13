@@ -84,7 +84,7 @@ def create_Commercial(offre_uploaded_1):
             offre_temp_pdf_1.write(offre_uploaded_1.read())
             offre_temp_pdf_path_1 = offre_temp_pdf_1.name
         cctp_pdf_search_tool_1 = PDFSearchTool(pdf=offre_temp_pdf_path_1)
-        return Commercial(name=offre_uploaded_1.name, offre=cctp_pdf_search_tool_1)
+        return Commercial(offre=cctp_pdf_search_tool_1)
     except Exception as e:
         print(f"Une erreur s'est produite create_Commercial : {str(e)}")
         return None

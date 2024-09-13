@@ -7,6 +7,10 @@ from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain.prompts import ChatPromptTemplate
+
+from crewai_tools import PDFSearchTool
+
+from utils.Agents import Rag
 from utils.Functions import DocumentWriter
 from utils.Session  import *
 
@@ -15,9 +19,11 @@ init_session()
 
 
 class BasicChat():
-    def __init__(self, context="Vous êtes un assistant technique."):
+    def __init__(self):
+        self.initiate()
+    def initiate(self):
         self.history = []
-        self.context = context
+        self.context = "Vous êtes un assistant qui répond aux questions."
         self.setContext(self.context)
         self.llm = ChooseLLM()
         
@@ -37,6 +43,7 @@ class BasicChat():
         llm_options(self)
     
     def stream(self, text=""):
+        st.write(text)
         mots = text.split()
         for mot in mots:
             yield mot + " "
@@ -51,7 +58,7 @@ class BasicChat():
                 doc.writeBlue(message.content)
             else:
                 doc.writeBlack(message.content)
-        doc.saveDocument("")
+        doc.saveDocument("Chat")
     
     # affichage de l'onglet chat simple
     def chat(self):
@@ -74,7 +81,7 @@ class BasicChat():
                 try:
                     response = st.write_stream(self.ask(user_query))
                 except Exception as e:
-                    response = f"({st.session_state.llm_model})     " + st.write_stream(self.stream(e))
+                    response = f"({st.session_state.llm_model}) " + st.write_stream(self.stream(e))
             self.history.append(AIMessage(content=response))
 
     # fonction générique pour poser une question au LLM actif 
@@ -89,11 +96,20 @@ class BasicChat():
         chain = prompt | self.llm | StrOutputParser()
         return chain.stream({})
 
+# class to chat with a document
+class BasicPdfRag(BasicChat):
+    def __init__(self, path: str = None):
+        self.initiate()
+        self.tool=tool = PDFSearchTool(pdf=path)
+        self.rag = Rag(tool)
+    
+    def ask(self, query) :
+        mots = self.rag.ask(query)
+        for mot in mots:
+            yield mot
 
 
-
-
-
+# TODO
 class BasicImageChatter(BasicChat):
   
     def __init__(self, context="Vous êtes un ingénieur en construction qui analyse des photos de chantier."):

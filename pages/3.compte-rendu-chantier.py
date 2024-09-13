@@ -25,7 +25,7 @@ try :
         if st.button("Voir le fichier"):
             os.startfile(crc_pdf_path)
 
-    gaelJaunin = RagAgent(name=file_uploaded.name, tool=crc_tool)
+    gaelJaunin = RagAgent(tool=crc_tool)
 
     if question:
         st.warning(question)

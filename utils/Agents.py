@@ -10,8 +10,8 @@ class Rag():
         self.tool = tool
         self.answer = ""
         self.research_agent = Agent(
-            role="Assistant de lecture",
-            goal="Trouver la réponse pertinente à une question en recherchant dans un document",
+            role="Assistant de recherche",
+            goal="Trouver les éléments pertinents à une question en recherchant dans un document",
             allow_delegation=False,
             verbose=True,
             backstory=(
@@ -29,7 +29,8 @@ class Rag():
         self.__init__(tool = self.tool)
          
     
-    def ask(self,question): 
+    
+    def ask(self,question):
         # --- Tasks ---
         self.task = Task(
             description=(
@@ -70,8 +71,10 @@ class Rag():
             return self.answer
         except Exception as e:
             print(f"Erreur lors de l'appel à Rag : {e}")
+            # st.write(result)
             return e 
 
+    
 
 
 
@@ -84,8 +87,7 @@ class Rag():
 
 
 class RagAgent() :
-    def __init__(self, name: str = "", tool: PDFSearchTool = None):
-        self.name = name
+    def __init__(self, tool: PDFSearchTool = None):
         self.tool = tool
         
         self.research_agent = Agent(

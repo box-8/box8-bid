@@ -152,16 +152,26 @@ def gerer_affaires():
                 ajouter_lot(current_macrolot)
 
 
-
 def lister_lots(macrolot):
+    # Filtrer les lots pour qu'ils appartiennent au macrolot donné
     lots = DbSession.query(Lot).filter_by(macrolot_id=macrolot.id).all()
-    lotname = st.radio("Selectionner un sous lot", 
-            options=[lot.categorie for lot in lots].append("Nouveau"),
+    
+    # Ajouter une option pour créer un nouveau lot
+    options = [lot.categorie for lot in lots] + ["Nouveau"]
+    
+    # Afficher les options dans un menu radio
+    lotname = st.radio(f"{macrolot.nom} > lots", 
+            options=options,
             key="selected_lot",
     )
-    lot = DbSession.query(Lot).filter_by(categorie=lotname).first()
-    st.session_state.lot = lot
     
+    # Récupérer le lot sélectionné ou initialiser un nouveau lot
+    if lotname == "Nouveau":
+        st.session_state.lot = None
+    else:
+        lot = DbSession.query(Lot).filter_by(categorie=lotname, macrolot_id=macrolot.id).first()
+        st.session_state.lot = lot
+
     
     # submit_button = st.button("Ajouter Lot")
     # if submit_button:
@@ -205,14 +215,20 @@ def ajouter_lot(macrolot):
         submit_button = st.form_submit_button("Ajouter Lot")
 
         if submit_button and devis is not None:
-            devis_path = os.path.join("devis", devis.name)
+            devis_directory = "uploads/devis"
+            if not os.path.exists(devis_directory):
+                os.makedirs(devis_directory)
+
+            # Chemin complet où le fichier sera stocké
+            devis_path = os.path.join(devis_directory, devis.name)
+            
             with open(devis_path, "wb") as f:
                 f.write(devis.getbuffer())
             lot = Lot(categorie=categorie, devis=devis_path, montant_commande=montant_commande, retenu=retenu, macrolot_id=macrolot.id)
             DbSession.add(lot)
             DbSession.commit()
             st.success("Lot ajouté avec succès.")
-            st.experimental_rerun()
+            st.rerun()
 
 
 

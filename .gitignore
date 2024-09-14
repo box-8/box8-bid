@@ -1,7 +1,7 @@
 .venv/
-db/
+db1/
 __pycache__/
-docs1/
+
 docs/
 _tests/
 _trash/

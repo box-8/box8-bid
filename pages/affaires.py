@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import create_engine, text as ttxt
 from sqlalchemy.orm import sessionmaker
-from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant, get_entity_dataframe
+from entities.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant, get_entity_dataframe
 
 from utils.Prompts import PromptSumarizeDevis
 from utils.Session import SQL_LITE_AFFAIRES_PATH, app_upload_file, init_session, trouver_index, confirmbox, string_to_float

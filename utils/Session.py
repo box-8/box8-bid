@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI, OpenAI
-from objects.Affaires import Affaire
+from entities.Affaires import Affaire
 
 # --- PATH de la base de données sqlite
 

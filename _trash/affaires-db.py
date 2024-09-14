@@ -4,7 +4,7 @@ import os
 import streamlit as st
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant
+from entities.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant
 
 from utils.Session import SQL_LITE_AFFAIRES_PATH
 

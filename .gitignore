@@ -6,3 +6,4 @@ _tests/
 _trash/
 *.docx
 uploads/*
+affaires.db

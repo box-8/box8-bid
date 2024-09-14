@@ -3,6 +3,6 @@ db/
 __pycache__/
 _tests/
 _tests1/
-_trash/
+_trash1/
 *.docx
 uploads/*

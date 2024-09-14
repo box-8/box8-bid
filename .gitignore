@@ -1,8 +1,6 @@
 .venv/
 db/
-db1/
 __pycache__/
-
 docs/
 _tests/
 _trash/

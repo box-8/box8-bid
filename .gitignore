@@ -1,8 +1,9 @@
 .venv/
 db/
 __pycache__/
+docs1/
+docs/
 _tests/
-_tests1/
-_trash1/
+_trash/
 *.docx
 uploads/*

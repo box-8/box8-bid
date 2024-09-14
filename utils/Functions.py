@@ -44,8 +44,6 @@ def extraire_tableau_json(chaine):
 
 
 
-
-
 class DocumentWriter():
     def __init__(self, title):
         self.docAnalyse = Document()

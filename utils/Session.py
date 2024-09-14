@@ -7,7 +7,32 @@ from objects.Affaires import Affaire
 # --- PATH de la base de données sqlite
 
 SQL_LITE_AFFAIRES_PATH = 'sqlite:///C:/_prod/box8-bid/affaires.db'
-            
+
+
+
+def string_to_float(value):
+    try:
+        # Suppression des symboles non numériques comme l'euro (€) et des espaces
+        cleaned_value = value.replace('€', '').replace(' ', '').replace(',', '.')
+        # Conversion en float
+        return float(cleaned_value)
+    except ValueError:
+        # Gestion des erreurs si la conversion échoue
+        return 0.0  # Vous pouvez décider d'une valeur par défaut ou d'une autre gestion d'erreur
+
+
+
+def app_upload_file(file):
+    devis_directory = "uploads/devis"
+    if not os.path.exists(devis_directory):
+        os.makedirs(devis_directory)
+        # Chemin complet où le fichier sera stocké
+    devis_path = os.path.join(devis_directory, file.name)
+    with open(devis_path, "wb") as f:
+        f.write(file.getbuffer())
+    return devis_path
+
+   
 def trouver_index(valeur, tableau):
     try:
         index = tableau.index(valeur)

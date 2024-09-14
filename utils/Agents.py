@@ -5,6 +5,7 @@ from utils.Functions import extraire_tableau_json
 
 init_session()
 
+
 class Rag():
     def __init__(self, tool: PDFSearchTool = None):
         self.tool = tool
@@ -28,7 +29,6 @@ class Rag():
         self.tool = PDFSearchTool(path=path)
         self.__init__(tool = self.tool)
          
-    
     
     def ask(self,question):
         # --- Tasks ---
@@ -77,9 +77,10 @@ class Rag():
     
 
 
-
-
-
+class RagPdf(Rag):
+    def __init__(self, path):
+        tool = PDFSearchTool(pdf=path)
+        super().__init__(tool)
 
 
 

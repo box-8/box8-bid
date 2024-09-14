@@ -11,7 +11,7 @@ init_session()
 ui_options_llmModel()
 
 
-st.header("Compte rendu de chantier (" + st.session_state.llm_model+")")
+st.header("Compte rendu de chantier (" + st.session_state.affaire.nom+")")
 
 file_uploaded = st.file_uploader("Télécharger le CCTP", type="pdf")
 crc_tool = None

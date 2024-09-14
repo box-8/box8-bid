@@ -1,11 +1,14 @@
+import json
 import os
 import pandas as pd
 import streamlit as st
 from sqlalchemy import create_engine, text as ttxt
 from sqlalchemy.orm import sessionmaker
 from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant, get_entity_dataframe
-from utils.Session import SQL_LITE_AFFAIRES_PATH, init_session, trouver_index, confirmbox
 
+from utils.Prompts import PromptSumarizeDevis
+from utils.Session import SQL_LITE_AFFAIRES_PATH, app_upload_file, init_session, trouver_index, confirmbox, string_to_float
+from utils.Agents import RagPdf
 
 st.set_page_config(page_title="Gestion des Affaires", page_icon="🕴️", layout="wide") 
 init_session()
@@ -255,14 +258,10 @@ def lister_lots(macrolot):
             options=options,
             key="selected_lot",
     )
-    # Récupérer le lot sélectionné ou initialiser un nouveau lot
-    if lotname == "Nouveau":
-        lot = Lot(macrolot_id=macrolot.id)
-        st.session_state.lot = lot 
-    else:
-        lot = DbSession.query(Lot).filter_by(categorie=lotname, macrolot_id=macrolot.id).first()        
-        st.session_state.lot = lot
-
+    
+    lot = DbSession.query(Lot).filter_by(categorie=lotname, macrolot_id=macrolot.id).first()        
+    st.session_state.lot = lot
+    
     if lotname:
         # Bouton pour supprimer le macrolot sélectionné
         if st.button(f"Supprimer le Lot ", key=f"delete_lot_{lot.id}"):
@@ -280,8 +279,12 @@ def lister_lots(macrolot):
     return lot
 
 
-def update_lot(lot, current_macrolot):
+def update_lot(lot : Lot, current_macrolot):
     cat = subcat(current_macrolot.type)
+    
+    index_lot = 0
+    if lot is not None:
+        index_lot = trouver_index(lot.categorie, cat)
     
     if lot is None : 
         st.write("Ajouter des lots sur ce macrolots")
@@ -289,22 +292,67 @@ def update_lot(lot, current_macrolot):
     else:
         id =lot.id
     with st.form(key=f'update_lot_{id}'):
-        categorie = st.selectbox("Catégorie", cat)
-        devis = st.file_uploader("Téléverser le CCTP", type="pdf")
-        montant_commande = st.number_input("Montant Commande", min_value=0.0, format="%.2f")
-        retenu = st.checkbox("Devis retenu")
+        categorie = st.selectbox("Catégorie", cat, index=index_lot)
+        description=lot.description
+        montant_commande=lot.montant_commande
+        if lot.devis is None:
+            devis = st.file_uploader("Téléverser le CCTP", type="pdf")
+        else :
+            devis1 = st.file_uploader("Téléverser le CCTP", type="pdf")
+            devis = st.text_input("Devis", value=lot.devis, disabled=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                voir_button = st.form_submit_button("Voir le pdf")
+            with col2:
+                analyser_button = st.form_submit_button("Analyser")
+            if voir_button:
+                os.startfile(lot.devis)
+            if analyser_button:
+                ragAgent = RagPdf(lot.devis)
+                jsonResponse = ragAgent.ask(PromptSumarizeDevis)
+                try :
+                    data = json.loads(jsonResponse)
+                    jsdescription = data.get('description')
+                    jsmontant = string_to_float(data.get("montant"))
+                    st.write("IA found relevant information")
+                    montant_commande = st.number_input(f"Montant Commande ({lot.montant_commande})", value=jsmontant, min_value=0.0, format="%.2f")
+                    description = st.text_area("Description ", value=jsdescription)
+                    lot.description = description
+                    lot.montant_commande = montant_commande
+                    DbSession.commit()
+                    
+                except Exception as e:
+                    # montant_commande = st.number_input("Montant Commande", value=lot.montant_commande, min_value=0.0, format="%.2f")
+                    # description = st.text_area("Description ", value=lot.description)
+                    st.write(jsonResponse)
+                    st.write(e)
+        
+        exp = st.expander("détails")
+        with exp:
+            st.write("description")
+            st.write(description)
+            st.header(montant_commande)
+            
+                    
+        retenu = st.checkbox("Devis retenu", value=lot.retenu)
         update_button = st.form_submit_button("Mettre à jour")
-
         if update_button:
             # Mettre à jour l'macrolot existante
             lot.categorie = categorie
-            lot.devis = devis
+            if devis1 is not None:
+                devis_path = app_upload_file(devis1)
+                lot.devis = devis_path
+            lot.description = description
             lot.retenu = retenu
             lot.montant_commande = montant_commande
             DbSession.commit()
             st.toast("Macrolot mis à jour avec succès")
             st.rerun()
+            
+        
+       
     
+
 
 # Fonction pour ajouter un lot à un macrolot
 @st.dialog("Ajouter un lot")
@@ -313,32 +361,25 @@ def ajouter_lot(macrolot):
     with st.form(key=f'ajouter_lot_{macrolot.id}'):
         st.header(f"{macrolot.nom}")
         categorie = st.selectbox("Catégorie", cat)
-        devis = st.file_uploader("Téléverser le CCTP", type="pdf")
-        montant_commande = st.number_input("Montant Commande", min_value=0.0, format="%.2f")
-        retenu = st.checkbox("Devis retenu")
-        
-        
+        devis = st.file_uploader("Téléverser le Devis", type="pdf")
+        # montant_commande = st.number_input("Montant Commande", min_value=0.0, format="%.2f")
+        # retenu = st.checkbox("Devis retenu")
         submit_button = st.form_submit_button("Ajouter Lot")
         if submit_button and devis is not None:
-            devis_directory = "uploads/devis"
-            if not os.path.exists(devis_directory):
-                os.makedirs(devis_directory)
-            # Chemin complet où le fichier sera stocké
-            devis_path = os.path.join(devis_directory, devis.name)
-            with open(devis_path, "wb") as f:
-                f.write(devis.getbuffer())
+
+            devis_path = app_upload_file(devis)
+
             lot = Lot(
                 categorie=categorie, 
                 devis=devis_path,
-                montant_commande=montant_commande,
-                retenu=retenu,
+                # montant_commande=montant_commande,
+                # retenu=retenu,
                 macrolot_id=macrolot.id)
             DbSession.add(lot)
             DbSession.commit()
             st.success("Lot ajouté avec succès.")
             st.rerun()
-        else:
-            st.warning("Il faut attacher un devis")
+        
 
 
 
@@ -397,6 +438,55 @@ def ajouter_intervenant(affaire):
 ############################################################################################################
 ###### MAIN
 ############################################################################################################
+def getSQL(key): 
+    queries = [
+        {"tout": """
+            SELECT 
+                affaires.nom AS affaire_nom,
+                macrolots.nom AS macrolot_nom,
+                lots.categorie AS lot_categorie,
+                lots.montant_commande AS lot_montant
+            FROM affaires
+            LEFT JOIN macrolots 
+            ON affaires.id = macrolots.affaire_id
+            LEFT JOIN lots 
+            ON macrolots.id = lots.macrolot_id
+            ORDER BY 
+                affaires.id ASC,
+                macrolots.nom ASC
+                
+            ;
+        """},
+        {"totaux": """
+            SELECT 
+                affaires.id AS affaire_id, 
+                affaires.nom AS affaire_nom, 
+                SUM(macrolots.montant) AS budget,
+                COUNT(macrolots.id) AS nombre_macrolots, 
+                SUM(lots.montant_commande) AS commande,
+                COUNT(lots.id) AS nombre_commandes
+            FROM 
+                affaires 
+            LEFT JOIN 
+                macrolots ON affaires.id = macrolots.affaire_id
+            LEFT JOIN 
+                lots ON lots.macrolot_id = macrolots.id
+            GROUP BY 
+                affaires.id, affaires.nom
+            ORDER BY 
+                affaires.id ASC,
+                macrolots.nom ASC
+                ;
+            
+        """}
+    ]
+    
+    # Parcours de la liste queries
+    for query in queries:
+        if key in query:
+            return query[key]  # Retourne le SQL correspondant à la clé
+    
+    return None  # Retourne None si la clé n'est pas trouvée
 
 
 # Gestion des affaires
@@ -474,32 +564,23 @@ def gerer_affaires():
                     
     with tab_liste:
                 
-        # Requête SQL
-        query = '''
-SELECT 
-    affaires.nom AS affaire_nom,
-    macrolots.nom AS macrolot_nom,
-    lots.categorie AS lot_categorie,
-    lots.categorie AS lot_montant
-FROM affaires
-LEFT JOIN macrolots 
-ON affaires.id = macrolots.affaire_id
-LEFT JOIN lots 
-ON macrolots.id = lots.macrolot_id
-            ;
 
-        '''
+        
 
-        # Exécution de la requête SQL
-        with engine.connect() as connection:
-            result = connection.execute(ttxt(query))
+        radioquery = st.radio(f"Choisir le rapport", 
+                ["tout","totaux"],
+                key="selected_query",
+        )
+        
 
-            # Récupérer les résultats sous forme de DataFrame
-            df = pd.DataFrame(result.fetchall(), columns=result.keys())
-
-        # Affichage dans Streamlit
-        st.write('Affichage des Affaires, Macrolots et Lots avec SQLAlchemy et SQLite')
-        st.dataframe(df)  # Affiche un tableau interactif
+        
+        
+        if radioquery:
+            with engine.connect() as connection:
+                result = connection.execute(ttxt(getSQL(radioquery)))
+                df = pd.DataFrame(result.fetchall(), columns=result.keys())# Récupérer les résultats sous forme de DataFrame
+            st.write('Affichage des Affaires, Macrolots et Lots avec SQLAlchemy et SQLite')# Affichage dans Streamlit
+            st.dataframe(df)  # Affiche un tableau interactif
 
 
          

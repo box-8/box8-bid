@@ -158,9 +158,6 @@ def ChooseVisionLLM(model_name=""):
         selected_llm = OpenAI(api_key=API_KEY, model="gpt-4")
     
     return selected_llm
-        
-        
-
 
 
 @st.dialog("Modèles et Options")
@@ -179,3 +176,18 @@ def llm_options(chat=None):
 
 
 
+
+if "confirm" not in st.session_state:
+    st.session_state.confirm = False
+
+@st.dialog("Confirmation requise")
+def confirmbox():
+    st.write("Confirmer !")
+    if st.button("Oui",type="secondary"):
+        st.session_state.confirm = True
+        st.rerun()
+    if st.button("Non"):
+        st.session_state.confirm = False
+        st.rerun()
+if "llm_model_vision" not in st.session_state:
+    st.session_state.confirm = False

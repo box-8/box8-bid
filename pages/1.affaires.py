@@ -1,20 +1,27 @@
 import os
+import pandas as pd
 import streamlit as st
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text as ttxt
 from sqlalchemy.orm import sessionmaker
 from objects.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant, get_entity_dataframe
-from utils.Session import SQL_LITE_AFFAIRES_PATH, init_session, trouver_index
+from utils.Session import SQL_LITE_AFFAIRES_PATH, init_session, trouver_index, confirmbox
+
 
 st.set_page_config(page_title="Gestion des Affaires", page_icon="🕴️", layout="wide") 
-
 init_session()
-
 # Initialisation de la base de données
 engine = create_engine(SQL_LITE_AFFAIRES_PATH)
 Session = sessionmaker(bind=engine)
 DbSession = Session()
 
 
+
+
+
+
+############################################################################################################
+######## AFFAIRES
+############################################################################################################
 
 def selectionner_affaires(affaires):
     affaire_name = st.radio("Selectionner une affaire", 
@@ -26,17 +33,15 @@ def selectionner_affaires(affaires):
     
     delete_button = st.button("Effacer Affaire ")
     if delete_button:
-        DbSession.delete(affaire)
-        DbSession.commit()
-        st.success("Affaire effacée avec succès.")
-        st.rerun()
-    return affaire
-    # remplacmeent du combo par une liste d'options
-    affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
-    affaire = DbSession.query(Affaire).get(affaire_id)
-    st.session_state.affaire = affaire
+        # confirmbox()
+        if st.session_state.confirm :
+            DbSession.delete(affaire)
+            DbSession.commit()
+            st.success("Affaire effacée avec succès.")
+            st.rerun()
     return affaire
 
+# affaire = DbSession.get(Affaire, id)
 @st.dialog("Ajouter une Affaire")
 def create_affaire():
     with st.form(key='affaire_form_new'):
@@ -48,7 +53,7 @@ def create_affaire():
         description = st.text_area("Description")
         montant = st.number_input("Montant total", min_value=0.0)
         type_affaire = st.selectbox("Type d'affaire", types)
-        state = st.selectbox("État de l'affaire", states)
+        state = st.radio("État de l'affaire", states)
         
         update_button = st.form_submit_button("Mettre à jour")
         if update_button:
@@ -94,86 +99,6 @@ def update_affaire(affaire):
 
 
 
-
-# Gestion des affaires
-def gerer_affaires():
-    # st.title(f"Gestion des Affaires ({st.session_state.llm_model})")
-
-    # Onglets pour gérer chaque section
-    tab_affaires, tab_intervenants, tab_macrolots, tab_lots = st.tabs(["Affaires", "Intervenants", "Macrolots", "Lots"])
-    affaires = DbSession.query(Affaire).all()
-
-    with tab_affaires:
-
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            affaire = selectionner_affaires(affaires)
-            create_button = st.button("Créer une Affaire")
-            if create_button:
-                create_affaire()
-        with col2:
-            # Formulaire pour maj une affaire
-            update_affaire(affaire)
-
-        with col3:
-            #affaires = get_entity_dataframe(DbSession, table_class=Affaire)
-            
-            for affaire in affaires:
-                text = f"{affaire.nom} - {affaire.state} - Type: {affaire.type}, Montant: {affaire.montant}"
-                if affaire.state =="Terminée":
-                    st.error(text)
-                elif affaire.state =="En cours":
-                    st.success(text)
-                elif affaire.state =="Prospect":
-                    st.warning(text)                
-        
-
-    with tab_intervenants:
-        # Sélectionner une affaire pour voir ses intervenants
-        #affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
-        col1, col2 = st.columns(2)
-        with col1 : 
-            ajouter_intervenant(st.session_state.affaire)
-        with col2 : 
-            afficher_intervenants(st.session_state.affaire)
-
-    with tab_macrolots:
-        # Sélectionner une affaire pour voir ses macrolots
-        # affaire = DbSession.query(Affaire).get(st.session_state.affaire.id)
-        col1, col2 = st.columns(2)
-        with col1 : 
-            current_macrolot = afficher_macrolots(st.session_state.affaire)
-        with col2 : 
-            update_macrolot(current_macrolot)
-        
-
-    with tab_lots:
-        if st.session_state.affaire.nom is None :
-            st.write("Choisir une affaire")    
-        elif current_macrolot is None:
-            st.subheader(f"{st.session_state.affaire.nom} > ...")
-            st.write("Créer ou choisir un macrolot")
-            
-        else:
-            
-            st.subheader(f"{st.session_state.affaire.nom} > {current_macrolot.nom}")
-            col1,col2= st.columns(2)
-            with col1:
-                if current_macrolot :
-                    current_lot = lister_lots(current_macrolot)
-                else:
-                    st.write("Choisir un macrolot")
-            with col2:
-                # Sélectionner un macrolot pour ajouter un lot
-                if current_macrolot :
-                    lot = update_lot(current_lot, current_macrolot)
-                else:
-                    st.write(f"Ajouter les lots pour définir {current_macrolot.nom} ({current_macrolot.type})")
-                    
-
-
-
-
 def subcat(cat):
     if cat=="génie civil":
         retour = ["terrassements", "VRD", "fondations", "gros euvre", "charpente"]
@@ -192,9 +117,9 @@ def subcat(cat):
 
 
 
-
+############################################################################################################
 #### MACROLOTS
-
+############################################################################################################
 
 # Fonction pour afficher les macrolots et leurs lots
 # Fonction pour afficher les macrolots et leurs lots
@@ -218,7 +143,6 @@ def afficher_macrolots(affaire):
     macrolot_selectionne_name = st.radio(
         "Sélectionner un macrolot", 
         options = radio_macrolots_options,
-        #format_func=lambda id: DbSession.query(Macrolot).get(id).nom + " - " + str(DbSession.query(Macrolot).get(id).montant)
     )
     st.write(f"Montant de l'affaire {str(montant_affaire)}")
     
@@ -227,7 +151,8 @@ def afficher_macrolots(affaire):
         if mcLot.nom == macrolot_selectionne_name:
             macrolot_selectionne_id = mcLot.id 
     try:
-        macrolot_selectionne = DbSession.query(Macrolot).get(macrolot_selectionne_id)
+
+        macrolot_selectionne = DbSession.get(Macrolot, macrolot_selectionne_id)
     except Exception as e:
         st.session_state.key_macrolot_nom = ""
         macrolot_selectionne = None
@@ -312,8 +237,11 @@ def update_macrolot (macrolot):
 
 
 
-###### LOTS
 
+
+############################################################################################################
+###### LOTS
+############################################################################################################
 
 def lister_lots(macrolot):
     # Filtrer les lots pour qu'ils appartiennent au macrolot donné
@@ -378,8 +306,6 @@ def update_lot(lot, current_macrolot):
             st.rerun()
     
 
-
-
 # Fonction pour ajouter un lot à un macrolot
 @st.dialog("Ajouter un lot")
 def ajouter_lot(macrolot):
@@ -423,8 +349,9 @@ def ajouter_lot(macrolot):
 
 
 
-
-
+############################################################################################################
+###### intervenants
+############################################################################################################
 
 # Fonction pour afficher les intervenants
 def afficher_intervenants(affaire):
@@ -467,8 +394,112 @@ def ajouter_intervenant(affaire):
 
 
 
+############################################################################################################
+###### MAIN
+############################################################################################################
 
 
+# Gestion des affaires
+def gerer_affaires():
+    # Onglets pour gérer chaque section
+    tab_affaires, tab_intervenants, tab_macrolots, tab_lots, tab_liste = st.tabs(["Affaires", "Intervenants", "Macrolots", "Lots", "Liste"])
+    affaires = DbSession.query(Affaire).all()
+
+    with tab_affaires:
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            affaire = selectionner_affaires(affaires)
+            create_button = st.button("Créer une Affaire")
+            if create_button:
+                create_affaire()
+        with col2:
+            # Formulaire pour maj une affaire
+            update_affaire(affaire)
+
+        with col3:
+            #affaires = get_entity_dataframe(DbSession, table_class=Affaire)
+            
+            for affaire in affaires:
+                text = f"{affaire.nom} - {affaire.state} - Type: {affaire.type}, Montant: {affaire.montant}"
+                if affaire.state =="Terminée":
+                    st.error(text)
+                elif affaire.state =="En cours":
+                    st.success(text)
+                elif affaire.state =="Prospect":
+                    st.warning(text)                
+        
+
+    with tab_intervenants:
+        # Sélectionner une affaire pour voir ses intervenants
+        #affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
+        col1, col2 = st.columns(2)
+        with col1 : 
+            ajouter_intervenant(st.session_state.affaire)
+        with col2 : 
+            afficher_intervenants(st.session_state.affaire)
+
+    with tab_macrolots:
+        # Sélectionner une affaire pour voir ses macrolots
+        # affaire = DbSession.query(Affaire).get(st.session_state.affaire.id)
+        col1, col2 = st.columns(2)
+        with col1 : 
+            current_macrolot = afficher_macrolots(st.session_state.affaire)
+        with col2 : 
+            update_macrolot(current_macrolot)
+        
+
+    with tab_lots:
+        if st.session_state.affaire.nom is None :
+            st.write("Choisir une affaire")    
+        elif current_macrolot is None:
+            st.subheader(f"{st.session_state.affaire.nom} > ...")
+            st.write("Créer ou choisir un macrolot")
+            
+        else:
+            
+            st.subheader(f"{st.session_state.affaire.nom} > {current_macrolot.nom}")
+            col1,col2= st.columns(2)
+            with col1:
+                if current_macrolot :
+                    current_lot = lister_lots(current_macrolot)
+                else:
+                    st.write("Choisir un macrolot")
+            with col2:
+                # Sélectionner un macrolot pour ajouter un lot
+                if current_macrolot :
+                    lot = update_lot(current_lot, current_macrolot)
+                else:
+                    st.write(f"Ajouter les lots pour définir {current_macrolot.nom} ({current_macrolot.type})")
+                    
+    with tab_liste:
+                
+        # Requête SQL
+        query = '''
+SELECT 
+    affaires.nom AS affaire_nom,
+    macrolots.nom AS macrolot_nom,
+    lots.categorie AS lot_categorie,
+    lots.categorie AS lot_montant
+FROM affaires
+LEFT JOIN macrolots 
+ON affaires.id = macrolots.affaire_id
+LEFT JOIN lots 
+ON macrolots.id = lots.macrolot_id
+            ;
+
+        '''
+
+        # Exécution de la requête SQL
+        with engine.connect() as connection:
+            result = connection.execute(ttxt(query))
+
+            # Récupérer les résultats sous forme de DataFrame
+            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+
+        # Affichage dans Streamlit
+        st.write('Affichage des Affaires, Macrolots et Lots avec SQLAlchemy et SQLite')
+        st.dataframe(df)  # Affiche un tableau interactif
 
 
          

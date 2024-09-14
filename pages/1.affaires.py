@@ -23,12 +23,70 @@ def selectionner_affaires(affaires):
     )
     affaire = DbSession.query(Affaire).filter_by(nom=affaire_name).first()
     st.session_state.affaire = affaire
+    
+    delete_button = st.button("Effacer Affaire ")
+    if delete_button:
+        DbSession.delete(affaire)
+        DbSession.commit()
+        st.success("Affaire effacée avec succès.")
+        st.rerun()
+    
+    create_button = st.button("Créer une Affaire")
+    if create_button:
+        
+        affaire = Affaire(nom="Nouvelle affaire", description="Description", type="Autre", montant="10000", state="Prospect")
+        DbSession.add(affaire)
+        DbSession.commit()
+
+        st.success("Affaire Créer avec succès.")
+        st.rerun()
     return affaire
     # remplacmeent du combo par une liste d'options
     affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
     affaire = DbSession.query(Affaire).get(affaire_id)
     st.session_state.affaire = affaire
     return affaire
+
+
+def update_affaire(affaire):
+    with st.form(key='affaire_form'):
+        types = ["SUPERVISION DE TRAVAUX", "MAITRISE D'OEUVRE", "DIRECTION DE PROJET", "AUTRE"]
+        states = ["Prospect", "En cours", "Terminée"]
+
+        # Trouver les index des valeurs actuelles
+        index_state = trouver_index(affaire.state, states)
+        index_type = trouver_index(affaire.type, types)
+        
+        # Afficher les valeurs actuelles pour le toast (pour le débogage)
+        st.toast(f"Affaire traitée : {st.session_state.affaire.nom}")
+        
+        # Champs de saisie du formulaire
+        nom = st.text_input("Nom de l'affaire", value=affaire.nom)
+        description = st.text_area("Description", value=affaire.description)
+        montant = st.number_input("Montant total", min_value=0.0, value=affaire.montant)
+        type_affaire = st.selectbox("Type d'affaire", types, index=index_type)
+        state = st.selectbox("État de l'affaire", states, index=index_state)
+        
+        update_button = st.form_submit_button("Mettre à jour")
+        if update_button:
+            # Mettre à jour l'affaire existante
+            affaire.nom = nom
+            affaire.description = description
+            affaire.montant = montant
+            affaire.type = type_affaire
+            affaire.state = state
+            
+            # Commit les changements dans la base de données
+            DbSession.commit()
+            
+            # Afficher un message de succès
+            st.success("Affaire mise à jour avec succès.")
+            
+            # Redémarrer l'application pour refléter les changements
+            # st.rerun()
+
+
+
 
 # Gestion des affaires
 def gerer_affaires():
@@ -44,60 +102,9 @@ def gerer_affaires():
         with col1:
             affaire = selectionner_affaires(affaires)
             
-            delete_button = st.button("Effacer Affaire " + affaire.nom)
-            if delete_button:
-                DbSession.delete(affaire)
-                DbSession.commit()
-                st.success("Affaire effacée avec succès.")
-                st.rerun()
-            
-            create_button = st.button("Créer une Affaire")
-            if create_button:
-                
-                affaire = Affaire(nom="Nouvelle affaire", description="Description", type="Autre", montant="10000", state="Prospect")
-                DbSession.add(affaire)
-                DbSession.commit()
-
-                st.success("Affaire Créer avec succès.")
-                st.rerun()
-            
         with col2:
             # Formulaire pour maj une affaire
-            with st.form(key='affaire_form'):
-                types = ["SUPERVISION DE TRAVAUX", "MAITRISE D'OEUVRE", "DIRECTION DE PROJET", "AUTRE"]
-                states = ["Prospect", "En cours", "Terminée"]
-
-                # Trouver les index des valeurs actuelles
-                index_state = trouver_index(affaire.state, states)
-                index_type = trouver_index(affaire.type, types)
-                
-                # Afficher les valeurs actuelles pour le toast (pour le débogage)
-                st.toast(f"Affaire traitée : {st.session_state.affaire.nom}")
-                
-                # Champs de saisie du formulaire
-                nom = st.text_input("Nom de l'affaire", value=affaire.nom)
-                description = st.text_area("Description", value=affaire.description)
-                montant = st.number_input("Montant total", min_value=0.0, value=affaire.montant)
-                type_affaire = st.selectbox("Type d'affaire", types, index=index_type)
-                state = st.selectbox("État de l'affaire", states, index=index_state)
-                
-                update_button = st.form_submit_button("Mettre à jour")
-                if update_button:
-                    # Mettre à jour l'affaire existante
-                    affaire.nom = nom
-                    affaire.description = description
-                    affaire.montant = montant
-                    affaire.type = type_affaire
-                    affaire.state = state
-                    
-                    # Commit les changements dans la base de données
-                    DbSession.commit()
-                    
-                    # Afficher un message de succès
-                    st.success("Affaire mise à jour avec succès.")
-                    
-                    # Redémarrer l'application pour refléter les changements
-                    # st.rerun()
+            update_affaire(affaire)
 
         with col3:
             #affaires = get_entity_dataframe(DbSession, table_class=Affaire)
@@ -141,52 +148,22 @@ def gerer_affaires():
         else:
             
             st.subheader(f"{st.session_state.affaire.nom} > {current_macrolot.nom}")
-            col1,col2,col3 = st.columns(3)
+            col1,col2= st.columns(2)
             with col1:
                 if current_macrolot :
-                    lister_lots(current_macrolot)
+                    current_lot = lister_lots(current_macrolot)
                 else:
                     st.write("Choisir un macrolot")
             with col2:
                 # Sélectionner un macrolot pour ajouter un lot
-                ajouter_lot(current_macrolot)
+                if current_macrolot :
+                    lot = update_lot(current_lot, current_macrolot)
+                else:
+                    st.write(f"Ajouter les lots pour définir {current_macrolot.nom} ({current_macrolot.type})")
+                    
 
 
-def lister_lots(macrolot):
-    # Filtrer les lots pour qu'ils appartiennent au macrolot donné
-    lots = DbSession.query(Lot).filter_by(macrolot_id=macrolot.id).all()
-    
-    # Ajouter une option pour créer un nouveau lot
-    options = [lot.categorie for lot in lots] + ["Nouveau"]
-    
-    # Afficher les options dans un menu radio
-    lotname = st.radio(f"{macrolot.nom} > lots", 
-            options=options,
-            key="selected_lot",
-    )
-    
-    # Récupérer le lot sélectionné ou initialiser un nouveau lot
-    if lotname == "Nouveau":
-        st.session_state.lot = None
-    else:
-        lot = DbSession.query(Lot).filter_by(categorie=lotname, macrolot_id=macrolot.id).first()
-        st.session_state.lot = lot
 
-    
-    # submit_button = st.button("Ajouter Lot")
-    # if submit_button:
-    #     nom = st.session_state.get("key_macrolot_nom", "")
-    #     type = st.session_state.get("key_macrolot_type", "")
-    #     montant = st.session_state.get("key_macrolot_montant", "")
-        
-    #     macrolot_selectionne = Macrolot(nom=nom, type=type, montant=montant, affaire_id=affaire.id)
-    #     DbSession.add(macrolot_selectionne)
-    #     DbSession.commit()
-    #     st.toast("Macrolot ajouté avec succès.")
-    #     st.rerun()
-    
-    
-    return lot
 
 def subcat(cat):
     if cat=="génie civil":
@@ -202,88 +179,23 @@ def subcat(cat):
             "menuiseries", "peintures", "clôture", "divers"]
     
     return retour
-# Fonction pour ajouter un lot à un macrolot
-def ajouter_lot(macrolot):
-    
-    cat = subcat(macrolot.type)
-    
-    with st.form(key=f'ajouter_lot_{macrolot.id}'):
-        categorie = st.selectbox("Catégorie", cat)
-        devis = st.file_uploader("Téléverser le devis (PDF)", type="pdf")
-        montant_commande = st.number_input("Montant Commande", min_value=0.0, format="%.2f")
-        retenu = st.checkbox("Devis retenu")
-        submit_button = st.form_submit_button("Ajouter Lot")
-
-        if submit_button and devis is not None:
-            devis_directory = "uploads/devis"
-            if not os.path.exists(devis_directory):
-                os.makedirs(devis_directory)
-
-            # Chemin complet où le fichier sera stocké
-            devis_path = os.path.join(devis_directory, devis.name)
-            
-            with open(devis_path, "wb") as f:
-                f.write(devis.getbuffer())
-            lot = Lot(categorie=categorie, devis=devis_path, montant_commande=montant_commande, retenu=retenu, macrolot_id=macrolot.id)
-            DbSession.add(lot)
-            DbSession.commit()
-            st.success("Lot ajouté avec succès.")
-            st.rerun()
 
 
 
 
 
-
-
-
-
-
-# Fonction pour afficher les intervenants
-def afficher_intervenants(affaire):
-    st.subheader(f"Intervenants pour {affaire.nom}")
-    if affaire is None:
-        return None
-
-    for intervenant in affaire.intervenants:
-        st.markdown(f"""{intervenant.prenom} {intervenant.nom} {intervenant.role}
-         ({intervenant.tel} - 
-         {intervenant.mail})""")
-        if st.button(f"Supprimer {intervenant.prenom} {intervenant.nom}", key=f"delete_intervenant_{intervenant.id}"):
-            DbSession.delete(intervenant)
-            DbSession.commit()
-            st.rerun()
-
-# Fonction pour ajouter un intervenant
-def ajouter_intervenant(affaire):
-    st.subheader(f"Ajouter un intervenant pour {affaire.nom}")
-    with st.form(key='ajouter_intervenant'):
-        prenom = st.text_input("Prénom")
-        nom = st.text_input("Nom")
-        role = st.selectbox("Rôle", ["maitre d'ouvrage", "bureau d'études", "coordinateur sécurité", "Entreprise"])
-        tel = st.text_input("Téléphone")
-        mail = st.text_input("Email")
-        submit_button = st.form_submit_button("Ajouter Intervenant")
-
-        if submit_button:
-            intervenant = Intervenant(prenom=prenom, nom=nom, role=role, tel=tel, mail=mail, affaire_id=affaire.id)
-            DbSession.add(intervenant)
-            DbSession.commit()
-            st.success("Intervenant ajouté avec succès.")
-            st.rerun()
-
+#### MACROLOTS
 
 
 # Fonction pour afficher les macrolots et leurs lots
 # Fonction pour afficher les macrolots et leurs lots
 def afficher_macrolots(affaire):
     st.subheader(f"Macrolots pour {affaire.nom}")
-    st.write("Les Macrolot désignent les entreprises qui possèdent les gros contrats sur le projet.")
+    
     # Si l'affaire n'a pas de macrolots
     if not affaire.macrolots:
         st.write("Aucun macrolot disponible pour cette affaire.")
         
-    
     # Sélectionner un macrolot parmi ceux de l'affaire
     macrolot_ids = [str(macrolot.id) for macrolot in affaire.macrolots]
     macrolot_names = [macrolot.nom for macrolot in affaire.macrolots]
@@ -292,9 +204,7 @@ def afficher_macrolots(affaire):
     montant_affaire = 0
     for mcLot in affaire.macrolots : 
         radio_macrolots_options.append(mcLot.nom)  
-        montant_affaire += mcLot.montant  
-    radio_macrolots_options.append("Nouveau Macrolot")
-    
+        montant_affaire += mcLot.montant      
     
     macrolot_selectionne_name = st.radio(
         "Sélectionner un macrolot", 
@@ -331,22 +241,34 @@ def afficher_macrolots(affaire):
         pass
     submit_button = st.button("Ajouter Macrolot")
     if submit_button:
-        nom = st.session_state.get("key_macrolot_nom", "")
-        type = st.session_state.get("key_macrolot_type", "")
-        montant = st.session_state.get("key_macrolot_montant", "")
-        
-        macrolot_selectionne = Macrolot(nom=nom, type=type, montant=montant, affaire_id=affaire.id)
-        DbSession.add(macrolot_selectionne)
-        DbSession.commit()
-        st.toast("Macrolot ajouté avec succès.")
-        st.rerun()
+        create_macrolot(affaire)
     return macrolot_selectionne
 
 
-
+@st.dialog("Ajouter un lot")
+def create_macrolot(affaire):
+    
+    types = ["génie civil", "équipement", "électricité", "autres"]
+    
+    with st.form(key=f'ajouter_macrolot'):
+        nom = st.text_input("   ", "")
+        type = st.selectbox("Téléverser le CCTP", types)
+        montant = st.number_input("Montant", min_value=0.0, format="%.2f")
+        
+        create_button = st.form_submit_button("Créer Macrolot")
+        if create_button:        
+            macrolot_selectionne = Macrolot(
+                nom=nom, 
+                type=type, 
+                montant=montant, 
+                affaire_id=affaire.id)
+            DbSession.add(macrolot_selectionne)
+            DbSession.commit()
+            st.toast("Macrolot ajouté avec succès.")
+            st.rerun()
+            
 # Fonction pour mettre à jour u macrolot
 def update_macrolot (macrolot):
-    # st.subheader(f"{st.session_state.affaire.nom} / {macrolot.nom} ")
     with st.form(key='update_macrolot'):
         
         types = ["génie civil", "équipement", "électricité", "autres"]
@@ -360,7 +282,7 @@ def update_macrolot (macrolot):
         else:
             index_type = trouver_index(macrolot.type, types)
         
-        nom = st.text_input("Entreprise du macrolot", value=macrolot.nom, key="key_macrolot_nom")
+        nom = st.text_input("Nom du macrolot", value=macrolot.nom, key="key_macrolot_nom")
         type_macrolot = st.selectbox("Type de macrolot", types, index=index_type, key="key_macrolot_type")  
         montant = st.number_input("Montant k€", value=macrolot.montant, min_value=0.0, format="%.2f", key="key_macrolot_montant")
         
@@ -375,6 +297,158 @@ def update_macrolot (macrolot):
             st.toast("Macrolot mis à jour avec succès")
             st.rerun()
 
+
+
+
+
+
+
+###### LOTS
+
+
+def lister_lots(macrolot):
+    # Filtrer les lots pour qu'ils appartiennent au macrolot donné
+    lots = DbSession.query(Lot).filter_by(macrolot_id=macrolot.id).all()
+    
+    # Ajouter une option pour créer un nouveau lot
+    options = [lot.categorie for lot in lots] 
+    
+    # Afficher les options dans un menu radio
+    lotname = st.radio(f"{macrolot.nom} > lots", 
+            options=options,
+            key="selected_lot",
+    )
+    # Récupérer le lot sélectionné ou initialiser un nouveau lot
+    if lotname == "Nouveau":
+        lot = Lot(macrolot_id=macrolot.id)
+        st.session_state.lot = lot 
+    else:
+        lot = DbSession.query(Lot).filter_by(categorie=lotname, macrolot_id=macrolot.id).first()        
+        st.session_state.lot = lot
+
+    if lotname:
+        # Bouton pour supprimer le macrolot sélectionné
+        if st.button(f"Supprimer le Lot ", key=f"delete_lot_{lot.id}"):
+            # Supprimer les lots associés et le macrolot
+            DbSession.delete(lot)
+            DbSession.commit()
+            st.success(f"Macrolot {lot.categorie} supprimé avec succès.")
+            st.rerun()
+    
+    submit_button = st.button("Ajouter Lot")
+    
+    if submit_button:
+        ajouter_lot(macrolot)
+    
+    return lot
+
+
+def update_lot(lot, current_macrolot):
+    cat = subcat(current_macrolot.type)
+    
+    if lot is None : 
+        st.write("Ajouter des lots sur ce macrolots")
+        return False
+    else:
+        id =lot.id
+    with st.form(key=f'update_lot_{id}'):
+        categorie = st.selectbox("Catégorie", cat)
+        devis = st.file_uploader("Téléverser le CCTP", type="pdf")
+        montant_commande = st.number_input("Montant Commande", min_value=0.0, format="%.2f")
+        retenu = st.checkbox("Devis retenu")
+        update_button = st.form_submit_button("Mettre à jour")
+
+        if update_button:
+            # Mettre à jour l'macrolot existante
+            lot.categorie = categorie
+            lot.devis = devis
+            lot.retenu = retenu
+            lot.montant_commande = montant_commande
+            DbSession.commit()
+            st.toast("Macrolot mis à jour avec succès")
+            st.rerun()
+    
+
+
+
+# Fonction pour ajouter un lot à un macrolot
+@st.dialog("Ajouter un lot")
+def ajouter_lot(macrolot):
+    cat = subcat(macrolot.type)
+    with st.form(key=f'ajouter_lot_{macrolot.id}'):
+        st.header(f"{macrolot.nom}")
+        categorie = st.selectbox("Catégorie", cat)
+        devis = st.file_uploader("Téléverser le CCTP", type="pdf")
+        montant_commande = st.number_input("Montant Commande", min_value=0.0, format="%.2f")
+        retenu = st.checkbox("Devis retenu")
+        
+        
+        submit_button = st.form_submit_button("Ajouter Lot")
+        if submit_button and devis is not None:
+            devis_directory = "uploads/devis"
+            if not os.path.exists(devis_directory):
+                os.makedirs(devis_directory)
+            # Chemin complet où le fichier sera stocké
+            devis_path = os.path.join(devis_directory, devis.name)
+            with open(devis_path, "wb") as f:
+                f.write(devis.getbuffer())
+            lot = Lot(
+                categorie=categorie, 
+                devis=devis_path,
+                montant_commande=montant_commande,
+                retenu=retenu,
+                macrolot_id=macrolot.id)
+            DbSession.add(lot)
+            DbSession.commit()
+            st.success("Lot ajouté avec succès.")
+            st.rerun()
+        else:
+            st.warning("Il faut attacher un devis")
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Fonction pour afficher les intervenants
+def afficher_intervenants(affaire):
+    st.subheader(f"Intervenants pour {affaire.nom}")
+    if affaire is None:
+        return None
+
+    for intervenant in affaire.intervenants:
+        st.markdown(f"""{intervenant.prenom} {intervenant.nom} {intervenant.role}
+         ({intervenant.tel} - 
+         {intervenant.mail})""")
+        if st.button(f"Supprimer {intervenant.prenom} {intervenant.nom}", key=f"delete_intervenant_{intervenant.id}"):
+            DbSession.delete(intervenant)
+            DbSession.commit()
+            st.rerun()
+
+# Fonction pour ajouter un intervenant
+def ajouter_intervenant(affaire):
+    st.subheader(f"{affaire.nom} > intervenants")
+    with st.form(key='ajouter_intervenant'):
+        prenom = st.text_input("Prénom")
+        nom = st.text_input("Nom")
+        role = st.selectbox("Rôle", ["maitre d'ouvrage", "bureau d'études", "coordinateur sécurité", "Entreprise"])
+        tel = st.text_input("Téléphone")
+        mail = st.text_input("Email")
+        submit_button = st.form_submit_button("Ajouter Intervenant")
+
+        if submit_button:
+            intervenant = Intervenant(prenom=prenom, nom=nom, role=role, tel=tel, mail=mail, affaire_id=affaire.id)
+            DbSession.add(intervenant)
+            DbSession.commit()
+            st.success("Intervenant ajouté avec succès.")
+            st.rerun()
 
 
 

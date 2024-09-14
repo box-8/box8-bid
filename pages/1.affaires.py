@@ -30,16 +30,6 @@ def selectionner_affaires(affaires):
         DbSession.commit()
         st.success("Affaire effacée avec succès.")
         st.rerun()
-    
-    create_button = st.button("Créer une Affaire")
-    if create_button:
-        
-        affaire = Affaire(nom="Nouvelle affaire", description="Description", type="Autre", montant="10000", state="Prospect")
-        DbSession.add(affaire)
-        DbSession.commit()
-
-        st.success("Affaire Créer avec succès.")
-        st.rerun()
     return affaire
     # remplacmeent du combo par une liste d'options
     affaire_id = st.selectbox("Sélectionner une affaire", [affaire.id for affaire in affaires], format_func=lambda id: DbSession.query(Affaire).get(id).nom)
@@ -47,19 +37,42 @@ def selectionner_affaires(affaires):
     st.session_state.affaire = affaire
     return affaire
 
+@st.dialog("Ajouter une Affaire")
+def create_affaire():
+    with st.form(key='affaire_form_new'):
+        types = ["SUPERVISION DE TRAVAUX", "MAITRISE D'OEUVRE", "DIRECTION DE PROJET", "AUTRE"]
+        states = ["Prospect", "En cours", "Terminée"]
+        st.toast(f"Affaire traitée : {st.session_state.affaire.nom}")
+        # Champs de saisie du formulaire
+        nom = st.text_input("Nom de l'affaire")
+        description = st.text_area("Description")
+        montant = st.number_input("Montant total", min_value=0.0)
+        type_affaire = st.selectbox("Type d'affaire", types)
+        state = st.selectbox("État de l'affaire", states)
+        
+        update_button = st.form_submit_button("Mettre à jour")
+        if update_button:
+            affaire = Affaire(
+            nom = nom,
+            description = description,
+            montant = montant,
+            type = type_affaire,
+            state = state)
+            DbSession.add(affaire)
+            DbSession.commit()
+            st.success("Affaire créée avec succès.")
+            st.rerun()
 
+            
 def update_affaire(affaire):
     with st.form(key='affaire_form'):
         types = ["SUPERVISION DE TRAVAUX", "MAITRISE D'OEUVRE", "DIRECTION DE PROJET", "AUTRE"]
         states = ["Prospect", "En cours", "Terminée"]
-
         # Trouver les index des valeurs actuelles
         index_state = trouver_index(affaire.state, states)
         index_type = trouver_index(affaire.type, types)
-        
         # Afficher les valeurs actuelles pour le toast (pour le débogage)
         st.toast(f"Affaire traitée : {st.session_state.affaire.nom}")
-        
         # Champs de saisie du formulaire
         nom = st.text_input("Nom de l'affaire", value=affaire.nom)
         description = st.text_area("Description", value=affaire.description)
@@ -69,21 +82,15 @@ def update_affaire(affaire):
         
         update_button = st.form_submit_button("Mettre à jour")
         if update_button:
-            # Mettre à jour l'affaire existante
             affaire.nom = nom
             affaire.description = description
             affaire.montant = montant
             affaire.type = type_affaire
             affaire.state = state
-            
-            # Commit les changements dans la base de données
             DbSession.commit()
             
-            # Afficher un message de succès
             st.success("Affaire mise à jour avec succès.")
-            
-            # Redémarrer l'application pour refléter les changements
-            # st.rerun()
+
 
 
 
@@ -101,7 +108,9 @@ def gerer_affaires():
         col1, col2, col3 = st.columns(3)
         with col1:
             affaire = selectionner_affaires(affaires)
-            
+            create_button = st.button("Créer une Affaire")
+            if create_button:
+                create_affaire()
         with col2:
             # Formulaire pour maj une affaire
             update_affaire(affaire)

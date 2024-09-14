@@ -1,8 +1,8 @@
 import os
 import tempfile
 import streamlit as st 
-from utils.Session import *
-from utils.Agents import RagAgent
+from box8.Session import *
+from box8.Agents import RagAgent
 from crewai_tools import PDFSearchTool
 
 st.set_page_config(page_title="Compte Rendu de Chantier", page_icon="🎙️", layout="wide") 

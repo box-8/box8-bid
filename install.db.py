@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey
+from sqlalchemy import Text, create_engine, Column, Integer, String, Float, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
-from utils.Session import SQL_LITE_AFFAIRES_PATH
+from box8.Session import SQL_LITE_AFFAIRES_PATH
 # Initialisation de la base de données avec le système moderne
 
 
@@ -57,7 +57,8 @@ class Lot(Base):
     retenu = Column(Boolean, default=False)
     montant_commande = Column(Float, default=0.0)
     macrolot_id = Column(Integer, ForeignKey('macrolots.id'))
-
+    description = Column(Text)  # Type texte pour des descriptions longues
+    
     # Relations
     macrolot = relationship("Macrolot", back_populates="lots")
     intervenants = relationship("LotIntervenant", back_populates="lot")

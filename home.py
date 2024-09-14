@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.Session import *
+from box8.Session import *
 
 
 st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🤖", layout="wide") 

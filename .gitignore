@@ -2,7 +2,8 @@
 db/
 __pycache__/
 docs/
-_tests/
+
+tests/
 _trash/
 *.docx
 uploads/*

@@ -6,9 +6,9 @@ from sqlalchemy import create_engine, text as ttxt
 from sqlalchemy.orm import sessionmaker
 from entities.Affaires import Affaire, Intervenant, Macrolot, Lot, LotIntervenant, get_entity_dataframe
 
-from utils.Prompts import PromptSumarizeDevis
-from utils.Session import SQL_LITE_AFFAIRES_PATH, app_upload_file, init_session, trouver_index, confirmbox, string_to_float
-from utils.Agents import RagPdf
+from box8.Prompts import PromptSumarizeDevis
+from box8.Session import SQL_LITE_AFFAIRES_PATH, app_upload_file, init_session, trouver_index, confirmbox, string_to_float
+from box8.Agents import RagPdf
 
 st.set_page_config(page_title="Gestion des Affaires", page_icon="🕴️", layout="wide") 
 init_session()

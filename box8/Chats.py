@@ -10,9 +10,9 @@ from langchain.prompts import ChatPromptTemplate
 
 from crewai_tools import PDFSearchTool
 
-from utils.Agents import Rag
-from utils.Functions import DocumentWriter
-from utils.Session  import *
+from box8.Agents import Rag
+from box8.Functions import DocumentWriter
+from box8.Session  import *
 
 
 init_session()

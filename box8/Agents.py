@@ -1,9 +1,10 @@
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import PDFSearchTool
-from utils.Session import *
-from utils.Functions import extraire_tableau_json
+from box8.Session import *
+from box8.Functions import extraire_tableau_json
 
 init_session()
+
 
 
 class Rag():
@@ -81,6 +82,8 @@ class RagPdf(Rag):
     def __init__(self, path):
         tool = PDFSearchTool(pdf=path)
         super().__init__(tool)
+
+
 
 
 

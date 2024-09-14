@@ -5,9 +5,7 @@ docx
 dotenv
 datetime 
 json
-
 langchain
 langchain_groq
-
-
 sqlalchemy
+pymupdf

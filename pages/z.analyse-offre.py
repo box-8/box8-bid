@@ -4,9 +4,9 @@ from crewai import Agent, Crew, Task
 import streamlit as st 
 import tempfile
 from crewai_tools import PDFSearchTool
-from utils.Session import *
-from utils.Agents import Commercial, Consultant, RagAgent
-from utils.Functions import toast, extraire_tableau_json, DocumentWriter
+from box8.Session import *
+from box8.Agents import Commercial, Consultant, RagAgent
+from box8.Functions import toast, extraire_tableau_json, DocumentWriter
 
 
 

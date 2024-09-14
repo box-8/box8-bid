@@ -1,7 +1,7 @@
 import tempfile
 import streamlit as st
-from utils.Session import *
-from utils.Chats import BasicChat, BasicPdfRag
+from box8.Session import *
+from box8.Chats import BasicChat, BasicPdfRag
 
 
 st.set_page_config(page_title="Analyse d'Offres", page_icon="💵", layout="wide") 

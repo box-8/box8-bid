@@ -227,14 +227,18 @@ class SummarizePdf():
     def __init__(self, input=None):
         if input:
             self.initiate(input)
+            
+    def setOutput(self,value=True):
+        self.output = value
     def initiate(self, input):
         
-        # les tableaux de texte 
+        # les tableaux de texte
+        self.output = True 
         self.initial_text = []
         self.final_text = []
         self.final_text.append("")
         self.ok = False
-        
+        self.documentName = "empty"
         if isinstance(input, str):
             self.ok = True
             self.usage = "os"
@@ -257,6 +261,7 @@ class SummarizePdf():
                 self.document = None
                 self.total_pages = 0
         else:
+            self.documentName = "erreur1"
             self.usage = "error"
             self.document = None
             self.total_pages = 0 
@@ -275,6 +280,8 @@ class SummarizePdf():
                 llm = ChooseLLM()
             )
             self.store()
+        else:
+            self.documentName = "erreur2"
             #self.summarize()
         
         
@@ -318,7 +325,7 @@ class SummarizePdf():
             result = self.crew.kickoff(inputs={"initial_text": text,"actual_page": actual_page})
             result = normalize_crew_result(result)
             self.final_text.append(result)
-            if self.usage == "st":
+            if self.output :
                 st.subheader(f"page {actual_page}")
                 st.write(result)
             return result
@@ -331,13 +338,14 @@ class SummarizePdf():
     def save(self, name = None):
         doc = DocumentWriter(self.documentName + " nombre de pages " + str(self.total_pages) )
         
+        path = os.path.join("uploads",self.documentName)
         for sumup in self.final_text:
             doc.writeBlack(sumup)
         if name :
-            doc.saveDocument( os.path.join("uploads",self.documentName) )
+            doc.saveDocument( path )
         else:
-            doc.saveDocument( os.path.join("uploads",self.documentName) )
-        
+            doc.saveDocument( path )
+        doc.path = path
         return doc
     
     def show(self):

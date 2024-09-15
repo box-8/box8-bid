@@ -6,6 +6,8 @@ from entities.Affaires import Affaire
 
 # --- PATH de la base de données sqlite
 
+APP_PATH = "C:\\_prod\\box8-bid\\"
+
 SQL_LITE_AFFAIRES_PATH = 'sqlite:///C:/_prod/box8-bid/affaires.db'
 
 
@@ -45,10 +47,12 @@ def init_session():
     init_session_llm()
     init_session_llm_vision()
     init_session_affaire()
-    
+
 def init_session_affaire():
     if "affaire" not in st.session_state:
         st.session_state.affaire = Affaire(nom="") 
+
+
 
 def init_session_llm():
     # -- modeles de langage

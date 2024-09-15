@@ -101,9 +101,14 @@ class BasicChat():
 class BasicPdfRag(BasicChat):
     def __init__(self, path: str = None):
         self.initiate()
-        self.tool=tool = PDFSearchTool(pdf=path)
-        self.rag = Rag(tool)
+        self.setfileByPath(path)
+        # self.tool= PDFSearchTool(pdf=path)
+        # self.rag = Rag(self.tool)
     
+    def setfileByPath(self, path: str):
+        self.tool= PDFSearchTool(pdf=path)
+        self.rag = Rag(self.tool)
+        
     def ask(self, query) :
         mots = self.rag.ask(query)
         for mot in mots:

@@ -101,8 +101,9 @@ class DocumentWriter():
         filename = f"result_{timestamp}.docx"
         
         if name is not None : 
-            path = self.docAnalyse.save(f"{name}-{timestamp}.docx")
+            path = self.docAnalyse.save(f"{name}.docx")
         else:
             path = self.docAnalyse.save(filename)
+        self.path = path
         return path
 

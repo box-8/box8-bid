@@ -89,7 +89,6 @@ class Rag():
         try : 
             result = self.crew.kickoff(inputs={"customer_question": question})
             self.answer = normalize_crew_result(result)
-            
             return self.answer
         except Exception as e:
             print(f"Erreur lors de l'appel à Rag : {e}")

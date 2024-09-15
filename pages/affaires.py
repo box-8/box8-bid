@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 import pandas as pd
 import streamlit as st
 from sqlalchemy import create_engine, text as ttxt
@@ -19,8 +20,23 @@ DbSession = Session()
 
 
 
-
-
+@st.dialog("Rechercher une info")
+def search_indoc():
+    with st.form(key=f'searching_doc'):
+        document = st.file_uploader("Téléverser le document", type="pdf")
+        question = st.text_area("votre question",key="search_indoc")
+        Prompt = f""" Answer the question in the same language :{question}"""
+        submit_button = st.form_submit_button("rechercher l'info")
+        if submit_button and document is not None:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_document:
+                temp_document.write(document.read())
+                temp_path = temp_document.name
+            toolRAG = RagPdf(path=temp_path)
+            response = toolRAG.ask(Prompt)
+            st.markdown(response)
+            if "search_indoc" not in st.session_state:
+                st.session_state.search_indoc = response
+            st.session_state.search_indoc = response
 
 ############################################################################################################
 ######## AFFAIRES
@@ -58,6 +74,7 @@ def create_affaire():
         type_affaire = st.selectbox("Type d'affaire", types)
         state = st.radio("État de l'affaire", states)
         
+            
         update_button = st.form_submit_button("Mettre à jour")
         if update_button:
             affaire = Affaire(
@@ -71,7 +88,11 @@ def create_affaire():
             st.success("Affaire créée avec succès.")
             st.rerun()
 
-            
+        
+        
+
+
+           
 def update_affaire(affaire):
     with st.form(key='affaire_form'):
         types = ["SUPERVISION DE TRAVAUX", "MAITRISE D'OEUVRE", "DIRECTION DE PROJET", "AUTRE"]
@@ -98,7 +119,10 @@ def update_affaire(affaire):
             DbSession.commit()
             
             st.success("Affaire mise à jour avec succès.")
-
+        questiondoc = st.form_submit_button("Question ?")
+        if questiondoc:
+            search_indoc()
+            
 
 
 

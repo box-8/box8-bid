@@ -24,7 +24,7 @@ DbSession = Session()
 def search_indoc():
     with st.form(key=f'searching_doc'):
         document = st.file_uploader("Téléverser le document", type="pdf")
-        question = st.text_area("votre question",key="search_indoc")
+        question = st.text_area("votre question")
         Prompt = f""" Answer the question in the same language :{question}"""
         submit_button = st.form_submit_button("rechercher l'info")
         if submit_button and document is not None:
@@ -122,7 +122,6 @@ def update_affaire(affaire):
         questiondoc = st.form_submit_button("Question ?")
         if questiondoc:
             search_indoc()
-            
 
 
 

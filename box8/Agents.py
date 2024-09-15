@@ -1,12 +1,45 @@
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import PDFSearchTool
 from box8.Session import *
-from box8.Functions import extraire_tableau_json
+from box8.Functions import DocumentWriter, extraire_tableau_json
+import fitz
 
 init_session()
 
 
 
+
+def normalize_crew_result(result):
+    
+    # Normaliser le résultat sous forme de chaîne de caractères
+    if isinstance(result, tuple):
+        # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
+        result = "\n".join(map(str, result))
+    elif isinstance(result, list):
+        # Si c'est une liste, on la convertit également en chaîne
+        result = "\n".join(result)
+    elif isinstance(result, dict):
+        # Si c'est un dictionnaire, formater chaque paire clé-valeur
+        result = "\n".join(f"{key}: {value}" for key, value in result.items())
+    else:
+        # Assurer que le résultat est bien une chaîne
+        result = str(result)
+    return result
+
+
+
+
+
+
+
+
+
+
+###############################################################################################
+###############################################################################################
+# --- Classe RagPdf ---
+###############################################################################################
+###############################################################################################
 class Rag():
     def __init__(self, tool: PDFSearchTool = None):
         self.tool = tool
@@ -55,20 +88,8 @@ class Rag():
             )
         try : 
             result = self.crew.kickoff(inputs={"customer_question": question})
-
-            # Normaliser le résultat sous forme de chaîne de caractères
-            if isinstance(result, tuple):
-                # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
-                self.answer = "\n".join(map(str, result))
-            elif isinstance(result, list):
-                # Si c'est une liste, on la convertit également en chaîne
-                self.answer = "\n".join(result)
-            elif isinstance(result, dict):
-                # Si c'est un dictionnaire, formater chaque paire clé-valeur
-                self.answer = "\n".join(f"{key}: {value}" for key, value in result.items())
-            else:
-                # Assurer que le résultat est bien une chaîne
-                self.answer = str(result)
+            self.answer = normalize_crew_result(result)
+            
             return self.answer
         except Exception as e:
             print(f"Erreur lors de l'appel à Rag : {e}")
@@ -76,8 +97,15 @@ class Rag():
             return e 
 
     
+    
+    
+    
 
-
+###############################################################################################
+###############################################################################################
+# --- Classe RagPdf ---
+###############################################################################################
+###############################################################################################
 class RagPdf(Rag):
     def __init__(self, path):
         tool = PDFSearchTool(pdf=path)
@@ -89,7 +117,11 @@ class RagPdf(Rag):
 
 
 
-
+###############################################################################################
+###############################################################################################
+# --- Classe RagAgent ---
+###############################################################################################
+###############################################################################################
 class RagAgent() :
     def __init__(self, tool: PDFSearchTool = None):
         self.tool = tool
@@ -169,21 +201,7 @@ class RagAgent() :
             )
         try : 
             result = self.crew.kickoff(inputs={"customer_question": question})
-
-            # Normaliser le résultat sous forme de chaîne de caractères
-            if isinstance(result, tuple):
-                # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
-                result = "\n".join(map(str, result))
-            elif isinstance(result, list):
-                # Si c'est une liste, on la convertit également en chaîne
-                result = "\n".join(result)
-            elif isinstance(result, dict):
-                # Si c'est un dictionnaire, formater chaque paire clé-valeur
-                result = "\n".join(f"{key}: {value}" for key, value in result.items())
-            else:
-                # Assurer que le résultat est bien une chaîne
-                result = str(result)
-
+            result = normalize_crew_result(result)
             return result
         except Exception as e:
             print(f"Erreur lors de l'appel à RagAgent : {e}")
@@ -191,7 +209,163 @@ class RagAgent() :
 
 
 
+
+
+
+
+
+
+
+
+###############################################################################################
+###############################################################################################
+
+# résumé de pdfs
+# input Et soit le chemin du fichier soit un file upload en streamlit
+# ###############################################################################################
+###############################################################################################
+class SummarizePdf():
+    def __init__(self, input=None):
+        if input:
+            self.initiate(input)
+    def initiate(self, input):
+        
+        # les tableaux de texte 
+        self.initial_text = []
+        self.final_text = []
+        self.final_text.append("")
+        self.ok = False
+        
+        if isinstance(input, str):
+            self.ok = True
+            self.usage = "os"
+            self.path = input
+            self.document = fitz.open(self.path)
+            self.documentName = os.path.basename(self.path)
+            self.total_pages = self.document.page_count
+            self.final_text.append(self.path)
+        elif input is not None:
+            # en st on a importé un fichier
+            try:
+                self.usage = "st"
+                self.ok = True
+                self.document = fitz.open(stream=input.read(), filetype="pdf")
+                self.documentName = input.name
+                self.total_pages = self.document.page_count
+                self.final_text.append(input.name)
+            except Exception as e:
+                self.usage = "error"
+                self.document = None
+                self.total_pages = 0
+        else:
+            self.usage = "error"
+            self.document = None
+            self.total_pages = 0 
+        
+        if self.ok:
+            self.agent_summarizer = Agent(
+                role="Summarize text",
+                goal="Summarize each page of a document ",
+                allow_delegation=False,
+                verbose=True,
+                backstory=(
+                    """
+                    We want to have a reader digested summary of a big document
+                    """
+                ),
+                llm = ChooseLLM()
+            )
+            self.store()
+            #self.summarize()
+        
+        
+    def store(self):
+        for page_number in range(self.total_pages):
+            page = self.document.load_page(page_number)
+            self.initial_text.append(page.get_text())
+    
+    def summarize(self):
+        textbefore = None  # Initialisation pour le premier texte
+        for i, text in enumerate(self.initial_text):  
+            self.sumupPage(i, text, textbefore)
+            textbefore = text
+    
+    
+    def sumupPage(self,actual_page, text,textbefore):
+        # --- Tasks ---
+        # print(text)
+        self.task_summarize = Task(
+            description=(
+                """
+                Summarize in two paragraphs MAXIMUM and in the same language the following text  :
+                 "{initial_text} 
+                 Page {actual_page}"
+                """
+            ),
+            expected_output="""
+                A strict, clear and concise summary strictly based on the text provided.
+                Answer in the language of the provided text.
+                """,
+            agent=self.agent_summarizer,
+        )
+        st.toast(f"Analysis page {actual_page} by : " + st.session_state.llm_model)
+        # --- Crew ---
+        self.crew = Crew(
+                agents=[self.agent_summarizer],
+                tasks=[self.task_summarize],
+                process=Process.sequential,
+            )
+        try : 
+            result = self.crew.kickoff(inputs={"initial_text": text,"actual_page": actual_page})
+            result = normalize_crew_result(result)
+            self.final_text.append(result)
+            if self.usage == "st":
+                st.subheader(f"page {actual_page}")
+                st.write(result)
+            return result
+            
+        except Exception as e:
+            print(f"Erreur lors de l'appel à Rag : {e}")
+            # st.write(result)
+            return e 
+        
+    def save(self, name = None):
+        doc = DocumentWriter(self.documentName + " nombre de pages " + str(self.total_pages) )
+        
+        for sumup in self.final_text:
+            doc.writeBlack(sumup)
+        if name :
+            doc.saveDocument( os.path.join("uploads",self.documentName) )
+        else:
+            doc.saveDocument( os.path.join("uploads",self.documentName) )
+        
+        return doc
+    
+    def show(self):
+        result = "" 
+        for sumup in self.final_text:
+            result = result + " " +sumup 
+        return result
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
+###############################################################################################
+###############################################################################################
 # --- Classe Commercial ---
+
+###############################################################################################
+###############################################################################################
 class Commercial() :
     def __init__(self, name: str = "", offre: PDFSearchTool = None):
         self.name = name
@@ -276,21 +450,7 @@ class Commercial() :
             )
         try : 
             result = self.crew.kickoff(inputs={"customer_question": question})
-
-            # Normaliser le résultat sous forme de chaîne de caractères
-            if isinstance(result, tuple):
-                # Si le résultat est un tuple, on le rejoint avec des sauts de ligne
-                result = "\n".join(map(str, result))
-            elif isinstance(result, list):
-                # Si c'est une liste, on la convertit également en chaîne
-                result = "\n".join(result)
-            elif isinstance(result, dict):
-                # Si c'est un dictionnaire, formater chaque paire clé-valeur
-                result = "\n".join(f"{key}: {value}" for key, value in result.items())
-            else:
-                # Assurer que le résultat est bien une chaîne
-                result = str(result)
-
+            result = normalize_crew_result(result)
             return result
         except Exception as e:
             print(f"Erreur lors de l'appel de Commercial.answer : {e}")
@@ -300,6 +460,16 @@ class Commercial() :
 
 
 
+
+
+
+
+
+###############################################################################################
+###############################################################################################
+# --- Classe Consultant ---
+###############################################################################################
+###############################################################################################
 # cctp_pdf_search_tool est de type PDFSearchTool
 class Consultant():
     def __init__(self, cctp : PDFSearchTool):

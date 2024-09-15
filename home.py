@@ -3,10 +3,7 @@ from box8.Session import *
 
 
 st.set_page_config(page_title="Analyse d'Offres et d'URL", page_icon="🤖", layout="wide") 
-
 init_session()
-
-
 st.title("Box 8 : boite à outils")
     
     
@@ -25,7 +22,7 @@ with tab2:
         ui_options_visionModel(sidebar=False)
     
 with tab1:
-    st.subheader("Analyse approfondie d'offres commerciales et d'URL")
+    st.subheader("Assistant conception réalisation")
     st.image("images/logo.png", width=150)
     st.markdown("""
     Cette application vous permet de :

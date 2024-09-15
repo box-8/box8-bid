@@ -126,7 +126,7 @@ def ChooseLLM(model_name=""):
             openai_api_key=API_KEY ,  # Remplace par ta clé API OpenAI
         )
     
-    # st.warning("Model for Agent is :  "  + selected_llm.model_name)
+    st.toast("Model for Agent is :  "  + selected_llm.model_name)
     return selected_llm
 
 

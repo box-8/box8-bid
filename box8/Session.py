@@ -47,7 +47,7 @@ def init_session():
     init_session_llm()
     init_session_llm_vision()
     init_session_affaire()
-
+    
 def init_session_affaire():
     if "affaire" not in st.session_state:
         st.session_state.affaire = Affaire(nom="") 
@@ -181,10 +181,15 @@ def ChooseVisionLLM(model_name=""):
         base_url = "http://localhost:1553/v1"  
         API_KEY="not-needed"
         selected_llm = OpenAI(base_url=base_url, api_key=API_KEY) 
-    elif name=="gpt-4":
+    elif name=="supervision-model":
         base_url = "https://api.openai.com/v1/chat/completions"
         API_KEY = os.getenv("OPENAI_API_KEY")
         selected_llm = OpenAI(api_key=API_KEY, model="gpt-4")
+    else:
+        st.toast("vision model name : " + st.session_state.llm_model_vision)
+        base_url = "https://api.openai.com/v1/chat/completions"
+        API_KEY = os.getenv("OPENAI_API_KEY")
+        selected_llm = OpenAI(api_key=API_KEY, model="gpt-4o-mini")
     
     return selected_llm
 

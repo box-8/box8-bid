@@ -21,10 +21,14 @@ init_session()
 class BasicChat():
     def __init__(self):
         self.initiate()
+        
     def initiate(self):
         self.history = []
         self.context = "Vous êtes un assistant qui répond aux questions."
         self.setContext(self.context)
+        self.setSessionLlm()
+        
+    def setSessionLlm(self):
         self.llm = ChooseLLM()
         
     def reset_history(self):
@@ -97,6 +101,12 @@ class BasicChat():
         chain = prompt | self.llm | StrOutputParser()
         return chain.stream({})
 
+
+
+
+
+
+
 # class to chat with a document
 class BasicPdfRag(BasicChat):
     def __init__(self, path: str = None):
@@ -115,85 +125,86 @@ class BasicPdfRag(BasicChat):
             yield mot
 
 
-# TODO
+
+
+
+# class to chat with a picture
+# Classe pour discuter avec une image
 class BasicImageChatter(BasicChat):
-  
-    def __init__(self, context="Vous êtes un ingénieur en construction qui analyse des photos de chantier."):
-        self.history = []
-        self.context = context
+    def __init__(self, image_uploaded):
+        # Appel au constructeur de la classe parente BasicChat pour initialiser `history` et les autres attributs
+        super().__init__()
+        
+        # Redéfinition du contexte spécifique pour la classe BasicImageChatter
+        self.context = "Vous êtes un ingénieur en construction qui analyse des photos de chantier."
         self.setContext(self.context)
-        self.llm = ChooseVisionLLM() # Initialisation du LLM Cision
-
         
-    def main(self):
-        # Interface utilisateur pour télécharger une image
-        
-        self.uploaded_doc = st.file_uploader("Télécharger une image", type=["jpg", "png", "bmp", "jpeg"])
-        if self.uploaded_doc is not None:
-            # Si un fichier est uploadé, passer à la discussion
-            st.sidebar.image(self.uploaded_doc, caption="uploaded file")
-            self.chat()
+        # Initialisation du LLM spécifique pour la vision
+        self.llm = ChooseVisionLLM()  # Placeholder, à remplacer par le bon modèle de vision
+        self.uploaded_doc = image_uploaded  # Stockage de l'image téléchargée
 
-    
-    
     def ask(self, query):
         if self.uploaded_doc is not None:
             try:
                 # Encodage de l'image en base64
                 image = self.uploaded_doc.read()
                 self.base64_image = base64.b64encode(image).decode("utf-8")
-                # Envoyer la requête au modèle avec l'image et la question
+                # Retourner directement le générateur
                 return self.get_response(query)
             except Exception as e:
-                return f"Erreur lors de la lecture de l'image: {e}"
+                yield f"Erreur lors de la lecture de l'image: {e}"
         else:
-            return "Veuillez télécharger une image avant de poser une question."
+            yield "Veuillez télécharger une image avant de poser une question."
 
-    
+
     def completion(self, query=""):
+        # Ajout de la question dans l'historique
+        self.history.append(HumanMessage(content=query))
         
-        messages = [
-                {
-                "role": "system",
-                "content": self.context,
-                },
-                {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": f"{query}"},
-                    {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{self.base64_image}"
-                    },
-                    },
-                ],
-                }
-            ]
-        print(messages)
-        return self.llm.chat.completions.create(
-            model=self.llm_model_name, # not used
-            messages=messages,
-            max_tokens=1000,
-            stream=True,
-            )
+        # Création de la liste de messages pour le contexte du chat
+        chatactual = [
+            {"role": "system", "content": self.context},
+            {"role": "user", "content": f"{query}"},
+            {"role": "user", "content": f"![Image](data:image/jpeg;base64,{self.base64_image})"}
+        ]
         
+        # Création du prompt avec le contexte et la requête
+        prompt = ChatPromptTemplate.from_messages(chatactual)
+        
+        # Utilisation de la syntaxe avec pipe (|)
+        chain = prompt | self.llm | StrOutputParser()
+
+        # Retour de la chaîne
+        return chain.stream({})
+
     def get_response(self, query=""):
-        # Génération de la requête avec le modèle
-        if query =="":
+        if query == "":
             return ""
+
         try:
-            # Création du payload pour l'API LLM local
-                        
-            completion = self.completion()
-            
+            # Création de la complétion via la chaîne
+            completion = self.completion(query)
+
+            # Retourner la complétion sous forme de générateur pour st.write_stream
             for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    yield chunk
+                yield chunk  # Le stream est renvoyé ici directement pour l'affichage
+            
+            # Une fois la réponse complète obtenue, ajouter au contexte
+            response = ''.join(completion)
+            self.history.append(AIMessage(content=response))
         except Exception as e:
-            return f"Erreur lors de l'envoi de la requête: {e}"
+            yield f"Erreur lors de l'envoi de la requête: {e}"
 
     
+     
+    # def main(self):
+    #     # Interface utilisateur pour télécharger une image
+        
+    #     self.uploaded_doc = st.file_uploader("Télécharger une image", type=["jpg", "png", "bmp", "jpeg"])
+    #     if self.uploaded_doc is not None:
+    #         # Si un fichier est uploadé, passer à la discussion
+    #         st.sidebar.image(self.uploaded_doc, caption="uploaded file")
+    #         self.chat()
 
 
 

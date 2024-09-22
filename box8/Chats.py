@@ -94,12 +94,113 @@ class BasicChat():
         return self.get_response(query)
         
     # fonction générique pour recevoir la réponse du  LLM actif 
-    # tofo implementer l'usage d'une question non inscrite dans l'historique de conversation
+    # todo implementer l'usage d'une question non inscrite dans l'historique de conversation
     def get_response(self, query):
         chatactual = self.history
         prompt = ChatPromptTemplate.from_messages(chatactual)
         chain = prompt | self.llm | StrOutputParser()
         return chain.stream({})
+
+
+
+
+# class to chat with a picture
+# Classe pour discuter avec une image
+class BasicImageChatter(BasicChat):
+    def __init__(self, image_uploaded):
+        # Appel au constructeur de la classe parente BasicChat pour initialiser `history` et les autres attributs
+        super().__init__()
+        
+        # Redéfinition du contexte spécifique pour la classe BasicImageChatter
+        self.context = "Vous êtes un ingénieur en construction qui analyse des photos de chantier."
+        self.setContext(self.context)
+        
+        # Initialisation du LLM spécifique pour la vision
+        self.llm = ChooseVisionLLM()  # Placeholder, à remplacer par le bon modèle de vision
+        self.uploaded_doc = image_uploaded  # Stockage de l'image téléchargée
+        
+        # Lecture du fichier sans le sauvegarder localement
+        image_data = image_uploaded.getvalue()
+        # Encodage de l'image en base64
+        self.base64_image = base64.b64encode(image_data).decode("utf-8")
+        
+        
+    def ask(self, query):
+        if self.uploaded_doc is not None:
+            try:
+                return self.get_response(query)
+            except Exception as e:
+                yield f"Erreur lors de la lecture de l'image: {e}"
+        else:
+            yield "Veuillez télécharger une image avant de poser une question."
+
+    
+    def get_response(self, query):
+        
+        completion = self.llm.chat.completions.create(
+        model="local-model", # not used
+        messages=[
+            {
+            "role": "system",
+            "content": f"{self.context}",
+            },
+            {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": f"{query} "},
+                {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{self.base64_image}"
+                },
+                },
+            ],
+            }
+        ],
+        max_tokens=1000,
+        stream=True
+        )
+
+        for chunk in completion:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+    
+    def get_responsess(self, query=""):
+        if query == "":
+            yield f"Popo: {query}"
+
+        try:
+            # Création de la complétion via la chaîne
+            completion = self.completion(query)
+            response = ''.join(completion)
+            # Retourner la complétion sous forme de générateur pour st.write_stream
+            for chunk in completion:
+                yield chunk  # Le stream est renvoyé ici directement pour l'affichage
+            
+            # Une fois la réponse complète obtenue, ajouter au contexte
+            
+        except Exception as e:
+            yield f"Erreur lors de l'envoi de la requête: {e}"  
+    def completion(self, query=""):
+        # Ajout de la question dans l'historique
+        st.warning(self.base64_image)
+        # Création de la liste de messages pour le contexte du chat
+        chatactual = [
+            {"role": "system", "content": self.context},
+            {"role": "user", "content": f"{query}"},
+            {"role": "user", "content": f"![Image](data:image/jpeg;base64,{self.base64_image})"}
+        ]
+        
+        # Création du prompt avec le contexte et la requête
+        prompt = ChatPromptTemplate.from_messages(chatactual)
+        
+        # Utilisation de la syntaxe avec pipe (|)
+        chain = prompt | self.llm | StrOutputParser()
+
+        # Retour de la chaîne
+        return chain.stream({})
+     
+
 
 
 
@@ -123,107 +224,4 @@ class BasicPdfRag(BasicChat):
         mots = self.rag.ask(query)
         for mot in mots:
             yield mot
-
-
-
-
-
-# class to chat with a picture
-# Classe pour discuter avec une image
-class BasicImageChatter(BasicChat):
-    def __init__(self, image_uploaded):
-        # Appel au constructeur de la classe parente BasicChat pour initialiser `history` et les autres attributs
-        super().__init__()
-        
-        # Redéfinition du contexte spécifique pour la classe BasicImageChatter
-        self.context = "Vous êtes un ingénieur en construction qui analyse des photos de chantier."
-        self.setContext(self.context)
-        
-        # Initialisation du LLM spécifique pour la vision
-        self.llm = ChooseVisionLLM()  # Placeholder, à remplacer par le bon modèle de vision
-        self.uploaded_doc = image_uploaded  # Stockage de l'image téléchargée
-
-    def ask(self, query):
-        if self.uploaded_doc is not None:
-            try:
-                # Encodage de l'image en base64
-                image = self.uploaded_doc.read()
-                self.base64_image = base64.b64encode(image).decode("utf-8")
-                # Retourner directement le générateur
-                return self.get_response(query)
-            except Exception as e:
-                yield f"Erreur lors de la lecture de l'image: {e}"
-        else:
-            yield "Veuillez télécharger une image avant de poser une question."
-
-
-    def completion(self, query=""):
-        # Ajout de la question dans l'historique
-        self.history.append(HumanMessage(content=query))
-        
-        # Création de la liste de messages pour le contexte du chat
-        chatactual = [
-            {"role": "system", "content": self.context},
-            {"role": "user", "content": f"{query}"},
-            {"role": "user", "content": f"![Image](data:image/jpeg;base64,{self.base64_image})"}
-        ]
-        
-        # Création du prompt avec le contexte et la requête
-        prompt = ChatPromptTemplate.from_messages(chatactual)
-        
-        # Utilisation de la syntaxe avec pipe (|)
-        chain = prompt | self.llm | StrOutputParser()
-
-        # Retour de la chaîne
-        return chain.stream({})
-
-    def get_response(self, query=""):
-        if query == "":
-            return ""
-
-        try:
-            # Création de la complétion via la chaîne
-            completion = self.completion(query)
-
-            # Retourner la complétion sous forme de générateur pour st.write_stream
-            for chunk in completion:
-                yield chunk  # Le stream est renvoyé ici directement pour l'affichage
-            
-            # Une fois la réponse complète obtenue, ajouter au contexte
-            response = ''.join(completion)
-            self.history.append(AIMessage(content=response))
-        except Exception as e:
-            yield f"Erreur lors de l'envoi de la requête: {e}"
-
-    
-     
-    # def main(self):
-    #     # Interface utilisateur pour télécharger une image
-        
-    #     self.uploaded_doc = st.file_uploader("Télécharger une image", type=["jpg", "png", "bmp", "jpeg"])
-    #     if self.uploaded_doc is not None:
-    #         # Si un fichier est uploadé, passer à la discussion
-    #         st.sidebar.image(self.uploaded_doc, caption="uploaded file")
-    #         self.chat()
-
-
-
-# class ImageChatter ():
-#     def __init__(self, image_path):
-#         # Initialiser la session et choisir le modèle de vision
-        
-#         self.llm = ChooseLLM()
-#         self.history = []
-#         self.context = "Vous êtes un assistant technique."
-        
-#         self.llm = ChooseVisionLLM()
-#         self.image_base64 = image_base64
-#         self.image = self.decode_image()
-        
-
-#     def decode_image(self):
-#         # Convertir l'image base64 en un objet PIL Image
-#         image_data = base64.b64decode(self.image_base64)
-#         image = Image.open(io.BytesIO(image_data))
-#         return image
 

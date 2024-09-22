@@ -1,7 +1,6 @@
 import base64
+import requests
 import streamlit as st
-from PIL import Image
-import io
 from langchain.chains.conversation.base import ConversationChain
 from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -104,108 +103,6 @@ class BasicChat():
 
 
 
-# class to chat with a picture
-# Classe pour discuter avec une image
-class BasicImageChatter(BasicChat):
-    def __init__(self, image_uploaded):
-        # Appel au constructeur de la classe parente BasicChat pour initialiser `history` et les autres attributs
-        super().__init__()
-        
-        # Redéfinition du contexte spécifique pour la classe BasicImageChatter
-        self.context = "Vous êtes un ingénieur en construction qui analyse des photos de chantier."
-        self.setContext(self.context)
-        
-        # Initialisation du LLM spécifique pour la vision
-        self.llm = ChooseVisionLLM()  # Placeholder, à remplacer par le bon modèle de vision
-        self.uploaded_doc = image_uploaded  # Stockage de l'image téléchargée
-        
-        # Lecture du fichier sans le sauvegarder localement
-        image_data = image_uploaded.getvalue()
-        # Encodage de l'image en base64
-        self.base64_image = base64.b64encode(image_data).decode("utf-8")
-        
-        
-    def ask(self, query):
-        if self.uploaded_doc is not None:
-            try:
-                return self.get_response(query)
-            except Exception as e:
-                yield f"Erreur lors de la lecture de l'image: {e}"
-        else:
-            yield "Veuillez télécharger une image avant de poser une question."
-
-    
-    def get_response(self, query):
-        
-        completion = self.llm.chat.completions.create(
-        model="local-model", # not used
-        messages=[
-            {
-            "role": "system",
-            "content": f"{self.context}",
-            },
-            {
-            "role": "user",
-            "content": [
-                {"type": "text", "text": f"{query} "},
-                {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{self.base64_image}"
-                },
-                },
-            ],
-            }
-        ],
-        max_tokens=1000,
-        stream=True
-        )
-
-        for chunk in completion:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
-    
-    def get_responsess(self, query=""):
-        if query == "":
-            yield f"Popo: {query}"
-
-        try:
-            # Création de la complétion via la chaîne
-            completion = self.completion(query)
-            response = ''.join(completion)
-            # Retourner la complétion sous forme de générateur pour st.write_stream
-            for chunk in completion:
-                yield chunk  # Le stream est renvoyé ici directement pour l'affichage
-            
-            # Une fois la réponse complète obtenue, ajouter au contexte
-            
-        except Exception as e:
-            yield f"Erreur lors de l'envoi de la requête: {e}"  
-    def completion(self, query=""):
-        # Ajout de la question dans l'historique
-        st.warning(self.base64_image)
-        # Création de la liste de messages pour le contexte du chat
-        chatactual = [
-            {"role": "system", "content": self.context},
-            {"role": "user", "content": f"{query}"},
-            {"role": "user", "content": f"![Image](data:image/jpeg;base64,{self.base64_image})"}
-        ]
-        
-        # Création du prompt avec le contexte et la requête
-        prompt = ChatPromptTemplate.from_messages(chatactual)
-        
-        # Utilisation de la syntaxe avec pipe (|)
-        chain = prompt | self.llm | StrOutputParser()
-
-        # Retour de la chaîne
-        return chain.stream({})
-     
-
-
-
-
-
-
 
 
 # class to chat with a document
@@ -225,3 +122,193 @@ class BasicPdfRag(BasicChat):
         for mot in mots:
             yield mot
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+#############################################################################################
+# VISION
+#############################################################################################
+
+
+class Imagevisionbot:
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        self.image_base64 = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+        self.conversation = []  # Stockage de l'historique des messages
+
+    def encode_image(self, image_file):
+        """Encode l'image en base64."""
+        self.image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+        return self.image_base64
+
+    
+    def ask(self, question):
+        """Ajoute la question à la conversation et envoie à l'API OpenAI."""
+        # Ajouter la question de l'utilisateur au contexte de conversation
+        
+        self.conversation.append({
+            "role": "user",
+            "content": question
+        })
+        
+        # Préparer la charge utile avec l'historique des messages
+        payload = {
+            "model": "gpt-4o-mini",  # Ajustez le modèle si nécessaire
+            "messages": self.conversation + [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{self.image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            "max_tokens": 300
+        }
+
+        # Faire l'appel à l'API OpenAI
+        response = requests.post("https://api.openai.com/v1/chat/completions", headers=self.headers, json=payload)
+
+        if response.status_code == 200:
+            response_json = response.json()
+
+            # Ajouter la réponse du modèle au contexte de la conversation
+            self.conversation.append({
+                "role": "assistant",
+                "content": response_json['choices'][0]['message']['content']
+            })
+
+            return response_json
+        else:
+            return {"error": "Failed to process the request", "details": response.text}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # class to chat with a picture
+# # Classe pour discuter avec une image
+# class BasicImageChatter(BasicChat):
+#     def __init__(self, image_uploaded):
+#         # Appel au constructeur de la classe parente BasicChat pour initialiser `history` et les autres attributs
+#         super().__init__()
+        
+#         # Redéfinition du contexte spécifique pour la classe BasicImageChatter
+#         self.context = "Vous êtes un ingénieur en construction qui analyse des photos de chantier."
+#         self.setContext(self.context)
+        
+#         # Initialisation du LLM spécifique pour la vision
+#         self.llm = ChooseVisionLLM()  # Placeholder, à remplacer par le bon modèle de vision
+#         self.uploaded_doc = image_uploaded  # Stockage de l'image téléchargée
+        
+#         # Lecture du fichier sans le sauvegarder localement
+#         image_data = image_uploaded.getvalue()
+#         # Encodage de l'image en base64
+#         self.base64_image = base64.b64encode(image_data).decode("utf-8")
+        
+        
+#     def ask(self, query):
+#         if self.uploaded_doc is not None:
+#             try:
+#                 return self.get_response(query)
+#             except Exception as e:
+#                 yield f"Erreur lors de la lecture de l'image: {e}"
+#         else:
+#             yield "Veuillez télécharger une image avant de poser une question."
+
+    
+#     def get_response(self, query):
+        
+#         completion = self.llm.chat.completions.create(
+#         model="local-model", # not used
+#         messages=[
+#             {
+#             "role": "system",
+#             "content": f"{self.context}",
+#             },
+#             {
+#             "role": "user",
+#             "content": [
+#                 {"type": "text", "text": f"{query} "},
+#                 {
+#                 "type": "image_url",
+#                 "image_url": {
+#                     "url": f"data:image/jpeg;base64,{self.base64_image}"
+#                 },
+#                 },
+#             ],
+#             }
+#         ],
+#         max_tokens=1000,
+#         stream=True
+#         )
+
+#         for chunk in completion:
+#             if chunk.choices[0].delta.content:
+#                 yield chunk.choices[0].delta.content
+    
+#     def get_responsess(self, query=""):
+#         if query == "":
+#             yield f"Popo: {query}"
+
+#         try:
+#             # Création de la complétion via la chaîne
+#             completion = self.completion(query)
+#             response = ''.join(completion)
+#             # Retourner la complétion sous forme de générateur pour st.write_stream
+#             for chunk in completion:
+#                 yield chunk  # Le stream est renvoyé ici directement pour l'affichage
+            
+#             # Une fois la réponse complète obtenue, ajouter au contexte
+            
+#         except Exception as e:
+#             yield f"Erreur lors de l'envoi de la requête: {e}"  
+#     def completion(self, query=""):
+#         # Ajout de la question dans l'historique
+#         st.warning(self.base64_image)
+#         # Création de la liste de messages pour le contexte du chat
+#         chatactual = [
+#             {"role": "system", "content": self.context},
+#             {"role": "user", "content": f"{query}"},
+#             {"role": "user", "content": f"![Image](data:image/jpeg;base64,{self.base64_image})"}
+#         ]
+        
+#         # Création du prompt avec le contexte et la requête
+#         prompt = ChatPromptTemplate.from_messages(chatactual)
+        
+#         # Utilisation de la syntaxe avec pipe (|)
+#         chain = prompt | self.llm | StrOutputParser()
+
+#         # Retour de la chaîne
+#         return chain.stream({})
+     

@@ -52,12 +52,12 @@ def selectionner_affaires(affaires):
     
     delete_button = st.button("Effacer Affaire ")
     if delete_button:
-        # confirmbox()
-        if st.session_state.confirm :
-            DbSession.delete(affaire)
-            DbSession.commit()
-            st.success("Affaire effacée avec succès.")
-            st.rerun()
+        #confirmbox()
+        #if st.session_state.confirm :
+        DbSession.delete(affaire)
+        DbSession.commit()
+        st.success("Affaire effacée avec succès.")
+        st.rerun()
     return affaire
 
 # affaire = DbSession.get(Affaire, id)

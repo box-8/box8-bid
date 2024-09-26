@@ -50,7 +50,7 @@ def doOption(visionbot, prompts):
         ]
         Retournez uniquement du JSON et aucune autre explication.
         """
-        response = visionbot.ask(question)
+        response = visionbot.ask(question, append=False)
         content = response["choices"][0]["message"]["content"]
         non_compliances = extraire_tableau_json(content)
         

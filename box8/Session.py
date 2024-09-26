@@ -223,5 +223,4 @@ def confirmbox():
     if st.button("Non"):
         st.session_state.confirm = False
         st.rerun()
-if "llm_model_vision" not in st.session_state:
-    st.session_state.confirm = False
+     

@@ -156,14 +156,15 @@ class Imagevisionbot:
         return self.image_base64
 
     
-    def ask(self, question):
+    def ask(self, question, append=True):
         """Ajoute la question à la conversation et envoie à l'API OpenAI."""
         # Ajouter la question de l'utilisateur au contexte de conversation
         
-        self.conversation.append({
-            "role": "user",
-            "content": question
-        })
+        if append:
+            self.conversation.append({
+                "role": "user",
+                "content": question
+            })
         
         # Préparer la charge utile avec l'historique des messages
         payload = {

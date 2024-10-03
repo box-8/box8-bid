@@ -268,13 +268,13 @@ class SummarizePdf():
         
         if self.ok:
             self.agent_summarizer = Agent(
-                role="Summarize text",
-                goal="Summarize each page of a document ",
+                role="Résumé de texte",
+                goal="Résumer chaque page d'un document ",
                 allow_delegation=False,
                 verbose=True,
                 backstory=(
                     """
-                    We want to have a reader digested summary of a big document
+                    Résumé page à page d'un gros document
                     """
                 ),
                 llm = ChooseLLM()
@@ -303,14 +303,14 @@ class SummarizePdf():
         self.task_summarize = Task(
             description=(
                 """
-                Summarize in two paragraphs MAXIMUM and in the same language the following text  :
+                Résumer en deux paragraphes MAXIMUM et dans la même langue que le texte orginal la page suivante  :
                  "{initial_text} 
                  Page {actual_page}"
                 """
             ),
             expected_output="""
-                A strict, clear and concise summary strictly based on the text provided.
-                Answer in the language of the provided text.
+                Un résumé strict, clair et concis strictement basé sur le texte fourni.
+                Répondez dans la langue du texte fourni.
                 """,
             agent=self.agent_summarizer,
         )

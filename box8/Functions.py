@@ -20,6 +20,7 @@ def toast(val=None):
     
 
 
+
 def extraire_tableau_json(chaine):
     """
     Extrait le premier tableau JSON trouvé dans une chaîne de caractères.
@@ -97,11 +98,11 @@ class DocumentWriter():
     def saveDocument(self,name=None):
         self.docAnalyse  # Indique que vous utilisez la variable globale à l'intérieur de la fonction
         # Save the Word document
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M")
         filename = f"result_{timestamp}.docx"
         
         if name is not None : 
-            path = self.docAnalyse.save(f"{name}.docx")
+            path = self.docAnalyse.save(f"{name}-{timestamp}.docx")
         else:
             path = self.docAnalyse.save(filename)
         self.path = path
